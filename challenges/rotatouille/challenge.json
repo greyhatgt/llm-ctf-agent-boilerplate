@@ -1,0 +1,7 @@
+{
+    "name": "rotatouille",
+    "description": "Remmy, but he likes toy ciphers",
+    "categories": ["crypto"],
+    "flag": "flag{r0und_rat_13}",
+    "flag_regex": "flag\\{\\S+\\}"
+}

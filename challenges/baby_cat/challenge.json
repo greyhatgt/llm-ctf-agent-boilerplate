@@ -1,0 +1,7 @@
+{
+    "name": "Baby Cat",
+    "description": "Kitten this challenge is easy! Find the flag hidden in the file",
+    "categories": ["misc"],
+    "flag": "flag{f0und_th3_f1@g_8295430617}",
+    "flag_regex": "flag\\{\\S+\\}"
+}

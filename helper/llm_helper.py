@@ -1,5 +1,6 @@
 import openai
 from openai.types.chat.chat_completion import ChatCompletion
+from openai.types.chat import ChatCompletionMessageParam
 import dotenv
 import os
 import requests
@@ -9,40 +10,56 @@ from time import sleep
 dotenv.load_dotenv()
 
 
-class LiteLLMModelClient:
-    def __init__(self, model: str, lite_llm_manager: 'LiteLLMManager'):
-        self.model = model
+class LiteLLMClient:
+    def __init__(self, lite_llm_manager: 'LiteLLMManager'):
         self.lite_llm_manager = lite_llm_manager
         self.instance = openai.OpenAI(
             base_url=os.getenv('LITELLM_BASE_URL'),
             api_key=os.getenv('LITELLM_API_KEY')
         )
+        self.history = []
 
-    # baby wrapper
-    def call(self, prompt: str) -> ChatCompletion:
-        response = self.instance.chat.completions.create(
-            model=self.model,
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
-        )
+    
+    def call(self, model, messages: list[ChatCompletionMessageParam], **kwargs) -> ChatCompletion:
+        params = {
+            "model": model,
+            "messages": messages,
+            **kwargs
+        }
         
-        # embed()
+        response = self.instance.chat.completions.create(
+            model=model,
+            messages=messages,
+            **kwargs
+        )
+
+        self.history.append({
+            "request": params,
+            "response": response
+        })
+
         if hasattr(response, 'id') and response.id is not None:
             self.lite_llm_manager.llm_requests.append(response.id)
         if len(response.choices) == 0 or response.choices[0].message.content is None:
             raise ValueError("No valid response from LLM")
         return response
+    
+    # baby wrapper
+    def simple_call(self, model, prompt: str, **kwargs) -> ChatCompletion:
+        return self.call(
+            model=model,
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            **kwargs
+        )
         
-    
-    
-
 
 class LiteLLMManager:
     '''
     
     '''
-    clients: list[LiteLLMModelClient]
+    clients: list[LiteLLMClient]
     llm_requests: list[str]
     
     @staticmethod
@@ -114,12 +131,12 @@ class LiteLLMManager:
         self.clients = []
         self.llm_requests = []
         
-    def create_model_client(self, model: str) -> LiteLLMModelClient:
-        client = LiteLLMModelClient(model, self)
+    def create_client(self) -> LiteLLMClient:
+        client = LiteLLMClient(self)
         self.clients.append(client)
         return client
         
-    def get_total_cost(self) -> float:
+    def get_usage_cost(self) -> float:
         '''
         Get the total cost of all LLM calls made through this manager.
         '''
