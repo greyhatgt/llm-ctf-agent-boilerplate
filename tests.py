@@ -47,25 +47,6 @@ class AgentTests(unittest.TestCase):
         except Exception as e:
             self.fail(f"LiteLLM simple_call failed with model '{test_model}': {e}")
 
-    # @unittest.skipIf(not os.path.exists("./challenges/baby_cat"), "Challenge 'baby_cat' not found")
-    # def test_03_agent_solve_challenge(self):
-    #     """Tests the agent's ability to solve a specific challenge."""
-    #     agent = Agent(self.llm_manager)
-
-    #     challenge = create_challenge_from_chaldir("./challenges/baby_cat")
-    #     self.assertIsNotNone(challenge, "Failed to create challenge from chaldir.")
-
-    #     challenge_grader = CTFChallengeGrader(challenge)
-    #     challenge_client = challenge_grader.create_client("./workdir")
-
-    #     flag = agent.solve_challenge(challenge_client)
-        
-    #     if flag:
-    #         is_correct = challenge_client.submit_flag(flag)
-    #         self.assertTrue(is_correct, f"Agent failed to solve the challenge. Submitted flag '{flag}' was incorrect.")
-    #     else:
-    #         self.fail("Agent did not return a flag.")
-
     @classmethod
     def tearDownClass(cls):
         """Clean up after all tests in this class have run."""
