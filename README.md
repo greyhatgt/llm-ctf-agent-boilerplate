@@ -106,6 +106,9 @@ uv run demo.py
     ```
 3.  Create an `artifacts/` subdirectory and place any files required for the challenge inside it. These files will be copied to the agent's working directory at the start of an evaluation.
 
+COMING SOON: Challenge Deployment Infrastructure (i.e. launch a website or other service accessible via a port).
+
+
 ## Architecture
 
 For a more detailed explanation of the project's components and how they interact, please see the [Architecture Documentation](./docs/architecture.md).
