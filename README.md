@@ -34,17 +34,17 @@ The agent requires access to an LLM through a LiteLLM-compatible API.
 To evaluate the default agent against all available challenges, run the evaluation script:
 
 ```bash
-uv run python eval_agent.py
+uv run eval_agent.py
 ```
 
 To run against a single challenge:
 
 ```bash
-uv run python eval_agent.py --challenge <challenge_name>
+uv run eval_agent.py --challenge <challenge_name>
 ```
 For example:
 ```bash
-uv run python eval_agent.py --challenge baby_cat
+uv run eval_agent.py --challenge baby_cat
 ```
 
 Evaluation results, including logs and success status, are saved in the `eval_results/` directory, organized by timestamp.
@@ -54,7 +54,7 @@ Evaluation results, including logs and success status, are saved in the `eval_re
 To run a quick test of your LLM connection and the agent's logic on a sample challenge, use the `demo.py` script:
 
 ```bash
-uv run python demo.py
+uv run demo.py
 ```
 
 ## Project Structure
