@@ -136,6 +136,17 @@ class LiteLLMManager:
         self.clients.append(client)
         return client
         
+    def get_cost_for_requests(self, request_ids: list[str]) -> float:
+        '''
+        Get the total cost for a specific list of LLM request IDs.
+        '''
+        total_cost = 0
+        for request_id in request_ids:
+            cost = self.get_request_cost(request_id)
+            if cost is not None:
+                total_cost += cost
+        return total_cost
+
     def get_usage_cost(self) -> float:
         '''
         Get the total cost of all LLM calls made through this manager.

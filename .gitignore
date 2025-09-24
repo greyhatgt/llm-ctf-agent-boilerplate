@@ -11,3 +11,4 @@ wheels/
 
 .env
 workdir/
+eval_results/

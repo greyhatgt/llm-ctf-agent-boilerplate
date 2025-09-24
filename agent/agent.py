@@ -109,7 +109,7 @@ class SimpleAgent(AgentInterface):
         
         match = re.search(challenge.challenge.flag_regex, flag)
         llm_flag = match.group(0) if match else None
-        
+
         self.log(f"Attempted to match flag against regex {challenge.challenge.flag_regex} gives {llm_flag}")
         if llm_flag:
             self.log("Found flag is in correct format.")
