@@ -1,0 +1,7 @@
+{
+    "name": "simple_crypto_1",
+    "description": "A simple RSA challenge",
+    "categories": ["crypto"],
+    "flag": "flag{easy_rsa_283472384}",
+    "flag_regex": "flag\\{\\S+\\}"
+}
