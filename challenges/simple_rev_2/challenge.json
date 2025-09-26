@@ -1,0 +1,7 @@
+{
+    "name": "simple_rev_2",
+    "description": "A simple reverse engineering challenge but with a twist",
+    "categories": ["crypto"],
+    "flag": "flag{xored_plaintext_585849239}",
+    "flag_regex": "flag\\{\\S+\\}"
+}
