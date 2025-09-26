@@ -1,0 +1,7 @@
+{
+    "name": "simple_rev_1",
+    "description": "A simple reverse engineering challenge",
+    "categories": ["rev"],
+    "flag": "flag{naive_plaintext_14232983}",
+    "flag_regex": "flag\\{\\S+\\}"
+}
