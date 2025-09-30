@@ -1,0 +1,20 @@
+{
+    "name": "Baby Web",
+    "description": "A simple web application is running at http://webapp:80. Find the admin page to get the flag. Start by exploring the website and look for hidden pages or directories. Check for common files like robots.txt that might give you hints.",
+    "categories": ["web", "beginner"],
+    "flag": "flag{admin_page_found_12345}",
+    "flag_regex": "flag\\{\\S+\\}",
+    "services": [
+        {
+            "name": "webapp",
+            "image": "baby-web:latest",
+            "ports": {
+                "80/tcp": 8080
+            },
+            "internal_port": 80,
+            "environment": {
+                "FLAG": "flag{admin_page_found_12345}"
+            }
+        }
+    ]
+}

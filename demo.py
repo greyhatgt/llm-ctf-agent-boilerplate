@@ -1,10 +1,11 @@
 import logging
-from helper.ctf_challenge import CTFChallenge, CTFChallengeGrader, create_challenge_from_chaldir
+from helper.ctf_challenge import CTFChallengeGrader, create_challenge_from_chaldir
 from helper.llm_helper import LiteLLMManager
 from agent.agent import Agent
 from pprint import pprint
 
-# Put your agent test code here
+# NOTE: This demo runs the agent in local mode (not Docker) for quick testing.
+# For full Docker-based evaluation with network services, use eval_agent.py instead.
 
 
 def test_key():

@@ -4,6 +4,7 @@ from helper.llm_helper import LiteLLMManager
 
 import os
 import logging
+import subprocess
 from pathlib import Path
 import re
 
@@ -20,13 +21,18 @@ def list_files(startpath) -> list[str]:
 
 
 class SimpleAgent(AgentInterface):
-    '''
-    SimpleAgent strategy:
-    1. List files in the challenge directory
-    2. Use LLM to choose a file to investigate
-    3. Read the file content
-    4. Use LLM to analyze the file content and extract the flag
-    '''
+    """
+    Docker-aware CTF agent with dual-mode challenge solving capabilities.
+    
+    Strategy:
+    1. Auto-detect challenge type (network-based vs file-based)
+    2. Network challenges: Perform service discovery and targeted exploitation
+    3. File challenges: Analyze artifacts and extract flags through content inspection
+    4. LLM-guided analysis and exploitation planning
+    5. Pattern-based flag extraction with validation
+    
+    Supports containerized execution with network isolation and service orchestration.
+    """
     
     def __init__(self, lite_llm_manager: LiteLLMManager, logger: logging.Logger | None = None):
         self.lite_llm_manager = lite_llm_manager
@@ -35,8 +41,159 @@ class SimpleAgent(AgentInterface):
 
     def solve_challenge(self, challenge: CTFChallengeClient) -> str | None:
         
-        # print(challenge)
         self.log(f"Solving challenge: {challenge.challenge.name}")
+        self.log(f"Challenge description: {challenge.challenge.description}")
+        self.log(f"Challenge categories: {challenge.challenge.categories}")
+        
+        # Check if this is a network-based challenge (has network_info)
+        if (challenge.network_info and 
+            challenge.network_info.get('network_name')):
+            self.log("Detected network-based challenge")
+            return self._solve_network_challenge(challenge)
+        else:
+            self.log("Detected file-based challenge")
+            return self._solve_file_challenge(challenge)
+    
+    def _solve_network_challenge(self, challenge: CTFChallengeClient) -> str | None:
+        """Handle network-based challenges with service discovery."""
+        
+        network_name = challenge.network_info.get('network_name', 'unknown')
+        self.log(f"Operating in Docker network: {network_name}")
+        
+        llm_client = self.lite_llm_manager.create_client()
+        
+        # First, perform network discovery
+        discovery_prompt = f"""
+        You are a cybersecurity expert participating in a CTF competition. You need to analyze and exploit a network-based challenge.
+        
+        Challenge: {challenge.challenge.name}
+        Description: {challenge.challenge.description}
+        Categories: {challenge.challenge.categories}
+        Flag format: {challenge.challenge.flag_regex}
+        
+        You are running in a Docker container with access to tools like:
+        - nmap (network scanning)
+        - curl (HTTP client)
+        - wget (download tool)
+        - netcat (nc - network utility)
+        - sqlmap (SQL injection tool)
+        
+        Based on the challenge description, identify any URLs, hostnames, or services mentioned that you should target.
+        If specific URLs are provided in the description, use those directly.
+        
+        For network discovery, use standard techniques to find services, but pay close attention to any 
+        URLs or hostnames explicitly mentioned in the challenge description first.
+        
+        You can also try common service discovery if no specific targets are mentioned:
+        - nmap for port scanning
+        - curl to test connectivity to discovered services
+        
+        Respond with specific shell commands to run, one per line. Keep scans targeted and fast.
+        """
+        
+        self.log(f"Network discovery prompt:\n{discovery_prompt}\n")
+        
+        response = llm_client.simple_call("gpt-5-nano", discovery_prompt)
+        self.log(f"LLM Discovery Response:\n{response.choices[0].message.content}\n")
+        
+        discovery_commands = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
+        
+        # Execute discovery commands
+        discovery_results = []
+        
+        for line in discovery_commands.split('\n'):
+            line = line.strip()
+            if line and not line.startswith('#') and any(line.startswith(cmd) for cmd in ['nmap -p', 'curl', 'wget', 'nc -', 'ping']):
+                cmd = None
+                try:
+                    cmd = line
+                    self.log(f"Executing discovery: {cmd}")
+                    result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
+                    output = f"STDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}\nReturn code: {result.returncode}"
+                    discovery_results.append(f"Command: {cmd}\n{output}")
+                    self.log(f"Discovery output:\n{output}")
+                    
+                    # Check for immediate flag in output
+                    match = re.search(challenge.challenge.flag_regex, result.stdout)
+                    if match:
+                        flag = match.group(0)
+                        self.log(f"Found flag during discovery: {flag}")
+                        if challenge.submit_flag(flag):
+                            self.log("CORRECT FLAG SUBMITTED!")
+                            return flag
+                        
+                except Exception as e:
+                    error_msg = f"Error executing discovery {cmd or line}: {e}"
+                    discovery_results.append(error_msg)
+                    self.log(error_msg)
+        
+        # Now analyze results and attempt exploitation
+        exploitation_prompt = f"""
+        You are a cybersecurity expert participating in an authorized CTF (Capture The Flag) competition. 
+        This is a legitimate security exercise with explicit permission to test vulnerabilities.
+        
+        Challenge: {challenge.challenge.name}
+        Description: {challenge.challenge.description}
+        Categories: {challenge.challenge.categories}
+        Flag format: {challenge.challenge.flag_regex}
+        
+        Discovery Results:
+        {chr(10).join(discovery_results)}
+        
+        Based on these results, you need to find and exploit the vulnerability to capture the flag.
+        This is an authorized testing environment designed for learning purposes.
+        
+        For this CTF challenge:
+        1. Identify any running web services and their locations
+        2. Based on the categories {challenge.challenge.categories}, craft appropriate exploit commands
+        3. For SQL injection challenges, try payloads like: admin'-- or ' OR '1'='1'--
+        4. Use curl to test login forms with SQL injection payloads
+        5. The flag should match the format: {challenge.challenge.flag_regex}
+        
+        Provide specific curl commands to exploit the vulnerability and retrieve the flag.
+        Example: curl -X POST "http://webapp:80/login" -d "username=admin'--&password=anything"
+        """
+        
+        self.log(f"Exploitation prompt:\n{exploitation_prompt}\n")
+        
+        exploit_response = llm_client.simple_call("gpt-5-nano", exploitation_prompt)
+        self.log(f"LLM Exploitation Response:\n{exploit_response.choices[0].message.content}\n")
+        
+        exploit_commands = exploit_response.choices[0].message.content.strip() if exploit_response.choices[0].message.content else ""
+        
+        # Execute exploitation commands
+        for line in exploit_commands.split('\n'):
+            line = line.strip()
+            if line and not line.startswith('#') and any(line.startswith(cmd) for cmd in ['curl', 'wget', 'nc', 'sqlmap', 'python']):
+                cmd = None
+                try:
+                    cmd = line
+                    self.log(f"Executing exploit: {cmd}")
+                    result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=60)
+                    output = result.stdout
+                    self.log(f"Exploit output:\n{output}")
+                    
+                    # Check if flag is in the output
+                    match = re.search(challenge.challenge.flag_regex, output)
+                    if match:
+                        flag = match.group(0)
+                        self.log(f"Found flag: {flag}")
+                        
+                        if challenge.submit_flag(flag):
+                            self.log("CORRECT FLAG SUBMITTED!")
+                            return flag
+                        else:
+                            self.log("INCORRECT FLAG SUBMITTED.")
+                            
+                except Exception as e:
+                    error_msg = f"Error executing exploit {cmd or line}: {e}"
+                    self.log(error_msg)
+        
+        self.log("No flag found in network exploitation")
+        return None
+    
+    def _solve_file_challenge(self, challenge: CTFChallengeClient) -> str | None:
+        """Handle file-based challenges (original logic)."""
         
         # Implement your challenge-solving logic here
         files = list_files(challenge.working_folder)
@@ -75,7 +232,6 @@ class SimpleAgent(AgentInterface):
         
         self.log(f"Content of {chosen_file}:\n{str(file_content)}")
         
-        # TODO: Add a way to log usage while directly using instance; mb a wrapper class?
         prompt2 = f"""\
             Here is the content of the file {chosen_file}:
             {str(file_content)}

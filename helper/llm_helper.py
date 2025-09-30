@@ -4,6 +4,7 @@ from openai.types.chat import ChatCompletionMessageParam
 import dotenv
 import os
 import requests
+import logging
 from IPython import embed
 from time import sleep
 
@@ -38,8 +39,10 @@ class LiteLLMClient:
             "response": response
         })
 
+        # Track request ID for cost calculation
         if hasattr(response, 'id') and response.id is not None:
             self.lite_llm_manager.llm_requests.append(response.id)
+            
         if len(response.choices) == 0 or response.choices[0].message.content is None:
             raise ValueError("No valid response from LLM")
         return response
@@ -56,9 +59,16 @@ class LiteLLMClient:
         
 
 class LiteLLMManager:
-    '''
+    """
+    Manager for LiteLLM API clients with cost tracking and observability.
     
-    '''
+    Features:
+    - Creates and manages multiple LLM clients
+    - Tracks all request IDs for cost calculation
+    - Provides detailed usage analytics
+    - Supports both individual and batch cost calculations
+    - Integrates with LiteLLM's cost tracking API
+    """
     clients: list[LiteLLMClient]
     llm_requests: list[str]
     
@@ -151,9 +161,17 @@ class LiteLLMManager:
         '''
         Get the total cost of all LLM calls made through this manager.
         '''
-        total_cost = 0
+        if not self.llm_requests:
+            return 0.0
+            
+        total_cost = 0.0
         for request_id in self.llm_requests:
-            cost = self.get_request_cost(request_id)
-            if cost is not None:
-                total_cost += cost
+            try:
+                cost = self.get_request_cost(request_id)
+                if cost is not None:
+                    total_cost += cost
+            except Exception as e:
+                # Log error but continue with other requests
+                logging.warning(f"Could not get cost for request {request_id}: {e}")
+                continue
         return total_cost
