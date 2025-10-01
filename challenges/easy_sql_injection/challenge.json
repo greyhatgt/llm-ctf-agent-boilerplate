@@ -14,12 +14,6 @@
             "internal_port": 80,
             "environment": {
                 "FLAG": "flag{sql_1nj3ct10n_1s_3asy_9876543210}"
-            },
-            "health_check": {
-                "type": "http",
-                "url": "http://localhost:80",
-                "max_attempts": 10,
-                "delay": 2
             }
         }
     ]

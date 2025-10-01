@@ -14,7 +14,6 @@ This enhanced version of the CTF LLM Agent now supports running agents in Docker
 - Define additional services in `challenge.json`
 - Services run on the same Docker network as the agent
 - Automatic image building from `docker/` directory
-- Health checks and service readiness validation
 
 ### 3. Network Isolation
 - Each challenge gets its own Docker network
@@ -70,11 +69,6 @@ challenges/my_challenge/
 - `ports`: Port mapping for external access (host:container)
 - `environment`: Environment variables
 - `volumes`: Volume mounts
-
-#### Health Check Types
-- `port`: Check if a port is open
-- `http`: Check HTTP endpoint
-- `command`: Run custom command
 
 ## Agent Capabilities
 
@@ -143,8 +137,7 @@ The included `easy_sql_injection` challenge demonstrates:
 ### Adding New Service Types
 1. Create service configuration in `challenge.json`
 2. Add Docker files in `docker/` directory
-3. Configure health checks
-4. Test service startup
+3. Test service startup
 
 ### Custom Agent Logic
 Update `agent/agent.py` to handle new challenge types:
@@ -170,13 +163,11 @@ Images are built automatically if:
 
 ### Network Issues
 - Services start before agent execution
-- Health checks validate service readiness
 - Use container names as hostnames
 
 ### Service Issues
 - Check service logs in Docker output
 - Verify Dockerfile and application code
-- Test health check configuration
 
 ## Security Notes
 
