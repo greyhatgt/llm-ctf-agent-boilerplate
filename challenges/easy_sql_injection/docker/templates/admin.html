@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - SecureApp</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .dashboard {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+        .flag-container {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .flag {
+            font-family: monospace;
+            font-size: 18px;
+            font-weight: bold;
+            color: #155724;
+            word-break: break-all;
+        }
+        .logout {
+            float: right;
+            color: #007bff;
+            text-decoration: none;
+        }
+        .logout:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="header">
+            <h1>Admin Dashboard</h1>
+            <p>Welcome, {{ username }}! <a href="/logout" class="logout">Logout</a></p>
+        </div>
+        
+        <h2>🎉 Congratulations!</h2>
+        <p>You have successfully exploited the SQL injection vulnerability and gained admin access!</p>
+        
+        <div class="flag-container">
+            <h3>🚩 Your Flag:</h3>
+            <div class="flag">{{ flag }}</div>
+        </div>
+        
+        <h3>What happened?</h3>
+        <p>The login form was vulnerable to SQL injection because the application directly embedded user input into the SQL query without proper sanitization:</p>
+        <pre><code>query = f"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'"</code></pre>
+        
+        <p>By using payloads like <code>' OR '1'='1' --</code>, you were able to bypass the authentication mechanism.</p>
+        
+        <h3>How to fix this:</h3>
+        <ul>
+            <li>Use parameterized queries or prepared statements</li>
+            <li>Validate and sanitize all user inputs</li>
+            <li>Implement proper error handling</li>
+            <li>Use an ORM framework that handles SQL injection prevention</li>
+        </ul>
+    </div>
+</body>
+</html>

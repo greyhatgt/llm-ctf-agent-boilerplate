@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard - SecureApp</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 100px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .dashboard {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .logout {
+            float: right;
+            color: #007bff;
+            text-decoration: none;
+        }
+        .logout:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <h1>User Dashboard</h1>
+        <p>Welcome, {{ username }}! <a href="/logout" class="logout">Logout</a></p>
+        
+        <p>You have successfully logged in, but you need admin privileges to access the flag.</p>
+        <p>Try to find a way to escalate your privileges or log in as an admin user.</p>
+    </div>
+</body>
+</html>

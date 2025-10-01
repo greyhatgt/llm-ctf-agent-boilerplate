@@ -1,20 +1,33 @@
 # CTF LLM Agent Boilerplate
 
-This project provides a boilerplate for developing and evaluating Large Language Model (LLM) based agents for Capture The Flag (CTF) competitions. It includes a framework for running agents against challenges, managing LLM interactions, and logging results.
+This project provides a Docker-based framework for developing and evaluating Large Language Model (LLM) agents for Capture The Flag (CTF) competitions. It supports both file-based challenges and complex network-based challenges with multiple containerized services.
+
+## Features
+
+- **Docker-based execution**: Complete isolation and reproducible environments
+- **Multi-service challenges**: Deploy web applications, databases, and other services
+- **Network-aware agents**: Automatic detection of network vs file-based challenges
+- **LLM cost tracking**: Full observability of API usage and costs
+- **Automated evaluation**: Batch testing across multiple challenges
 
 ## Quickstart
 
-### 1. Installation
+### 1. Prerequisites
 
-This project uses `uv` for package management. If you don't have it installed, you can find instructions here: https://docs.astral.sh/uv/getting-started/installation/
+- **Docker**: Required for containerized challenge execution
+- **uv**: Package manager for Python dependencies
 
-First, install the dependencies:
+Install uv if you don't have it: https://docs.astral.sh/uv/getting-started/installation/
+
+### 2. Installation
+
+Install dependencies:
 
 ```bash
 uv sync
 ```
 
-### 2. Configuration
+### 3. Configuration
 
 The agent requires access to an LLM through a LiteLLM-compatible API.
 
@@ -29,57 +42,60 @@ The agent requires access to an LLM through a LiteLLM-compatible API.
     LITELLM_API_KEY="your-litellm-api-key"
     ```
 
-### 3. Running the Evaluation
+### 4. Running the Evaluation
 
-To evaluate the default agent against all available challenges, run the evaluation script:
+All challenges now run in Docker containers with automatic resource management.
+
+To evaluate against all challenges:
 
 ```bash
 uv run eval_agent.py
 ```
 
-To run against a single challenge:
+To run a single challenge:
 
 ```bash
 uv run eval_agent.py --challenge <challenge_name>
 ```
-For example:
+
+Examples:
 ```bash
-uv run eval_agent.py --challenge baby_cat
+uv run eval_agent.py --challenge baby_cat              # File-based challenge
+uv run eval_agent.py --challenge easy_sql_injection    # Network-based challenge  
 ```
 
-Evaluation results, including logs and success status, are saved in the `eval_results/` directory, organized by timestamp.
-
-### 4. Testing the Agent
-
-To run a quick test of your LLM connection and the agent's logic on a sample challenge, use the `demo.py` script:
-
-```bash
-uv run demo.py
-```
+Results are saved in `eval_results/` with detailed logs, costs, and LLM request tracking.
 
 ## Project Structure
 
 ```
 .
 ├── agent/
-│   └── agent.py           # <-- Main agent logic goes here. Modify this file.
+│   └── agent.py           # Main agent with network/file challenge detection
 ├── challenges/
-│   ├── baby_cat/          # Example challenge
+│   ├── baby_cat/          # File-based challenge example
 │   │   ├── artifacts/
 │   │   │   └── myfile.txt
 │   │   └── challenge.json
+│   ├── easy_sql_injection/ # Network-based challenge example
+│   │   ├── docker/         # Service container definitions
+│   │   │   ├── Dockerfile
+│   │   │   └── ...
+│   │   ├── artifacts/
+│   │   └── challenge.json
 │   └── ...
-├── docs/
-│   └── architecture.md    # Detailed architecture documentation
-├── eval_results/          # Stores results from evaluation runs
+├── docker/
+│   └── agent/             # Agent container configuration
+│       ├── Dockerfile     # Agent execution environment
+│       └── run_agent.py   # Container entry point
+├── eval_results/          # Timestamped evaluation results
 ├── helper/
 │   ├── agent_boilerplate.py # Agent interface definition
-│   ├── ctf_challenge.py   # Helper classes for challenges (Grader, Client)
-│   └── llm_helper.py      # LiteLLM integration and cost tracking
-├── .env                   # Local environment configuration (API keys)
-├── .env.example           # Example environment file
-├── eval_agent.py          # Main script to run evaluations
-├── demo.py                # Script for quick testing and debugging
+│   ├── ctf_challenge.py   # Challenge models with service support
+│   ├── docker_manager.py  # Docker orchestration and networking
+│   └── llm_helper.py      # LLM integration with cost tracking
+├── .env                   # Environment configuration (API keys)
+├── eval_agent.py          # Main evaluation orchestrator
 └── README.md              # This file
 ```
 
@@ -88,27 +104,69 @@ uv run demo.py
 ### Implement a Custom Agent
 
 1.  Open `agent/agent.py`.
-2.  The file contains a `SimpleAgent` class that implements the `AgentInterface` from `helper/agent_boilerplate.py`.
-3.  Modify the `solve_challenge` method to implement your own strategy. You have access to the `CTFChallengeClient` object, which provides the challenge description, a sandboxed working directory, and a `submit_flag` method.
+2.  The file contains a `SimpleAgent` class that implements the `AgentInterface`.
+3.  Modify the `solve_challenge` method to implement your own strategy. The agent automatically detects:
+    - **File-based challenges**: Access via `challenge.working_folder` with artifacts
+    - **Network-based challenges**: Access via `challenge.network_info` with service discovery
+4.  Use the `CTFChallengeClient` object for challenge interaction and flag submission.
 
-### Create a New Challenge
+### Create a File-Based Challenge
 
-1.  Create a new directory in `challenges/`. The directory name will be the challenge's identifier.
-2.  Inside, create a `challenge.json` file with the following structure:
+1.  Create a new directory in `challenges/` (e.g., `my_challenge/`).
+2.  Create `challenge.json`:
     ```json
     {
-      "name": "My Awesome Challenge",
-      "description": "A brief description of what to do.",
+      "name": "My File Challenge",
+      "description": "Find the hidden flag in the provided files.",
       "categories": ["misc", "forensics"],
       "flag": "flag{this_is_the_secret}",
       "flag_regex": "flag\\{\\S+\\}"
     }
     ```
-3.  Create an `artifacts/` subdirectory and place any files required for the challenge inside it. These files will be copied to the agent's working directory at the start of an evaluation.
+3.  Create `artifacts/` subdirectory with challenge files.
 
-COMING SOON: Challenge Deployment Infrastructure (i.e. launch a website or other service accessible via a port).
+### Create a Network-Based Challenge
+
+1.  Create challenge directory and `challenge.json`:
+    ```json
+    {
+      "name": "My Web Challenge",
+      "description": "Exploit the vulnerable web application.",
+      "categories": ["web", "sql"],
+      "flag": "flag{sql_injection_success}",
+      "flag_regex": "flag\\{\\S+\\}",
+      "services": [
+        {
+          "name": "webapp",
+          "image": "my-webapp:latest", 
+          "ports": {"80/tcp": 8080},
+          "environment": {"FLAG": "flag{sql_injection_success}"}
+        }
+      ]
+    }
+    ```
+2.  Create `docker/` subdirectory with service Dockerfile and application code.
+3.  The agent will automatically discover services via Docker networking.
+
+### Monitor LLM Usage and Costs
+
+Each evaluation provides detailed observability:
+
+- **Per-challenge costs**: Individual LLM usage tracking
+- **Request IDs**: Full audit trail of API calls  
+- **Usage analytics**: Saved in `eval_results/*/llm_usage.json`
+- **Batch summaries**: Total costs across multiple challenges
 
 
 ## Architecture
 
-For a more detailed explanation of the project's components and how they interact, please see the [Architecture Documentation](./docs/architecture.md).
+The system uses Docker containers for challenge execution with the following flow:
+
+1. **Challenge Detection**: Automatic identification of file vs network challenges
+2. **Service Deployment**: Docker containers for challenge services (if any)  
+3. **Network Creation**: Isolated Docker network per challenge
+4. **Agent Execution**: Containerized agent with access to services
+5. **Result Collection**: LLM usage data and results extracted from containers
+6. **Resource Cleanup**: Automatic cleanup of containers and networks
+
+For detailed architecture documentation, see [docs/architecture.md](./docs/architecture.md).

@@ -4,13 +4,10 @@ import json
 import logging
 import time
 from datetime import datetime
-import io
-import shutil
-import concurrent.futures
 
-from agent.agent import Agent # The agent to evaluate
-from helper.ctf_challenge import create_challenge_from_chaldir, CTFChallengeGrader
+from helper.ctf_challenge import create_challenge_from_chaldir
 from helper.llm_helper import LiteLLMManager
+from helper.docker_manager import DockerManager
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -34,34 +31,87 @@ def evaluate_challenge(chal_dir, llm_manager, run_output_dir, run_timestamp):
 
     challenge_output_dir = os.path.join(run_output_dir, challenge_name)
     os.makedirs(challenge_output_dir)
-    
-    workdir = os.path.join(challenge_output_dir, "workdir")
 
+    docker_manager = None
     try:
         challenge = create_challenge_from_chaldir(chal_dir)
-        grader = CTFChallengeGrader(challenge)
-        client = grader.create_client(workdir)
-
-        # Setup individual logger for the agent
-        agent_log_stream = io.StringIO()
-        agent_logger = logging.getLogger(f"agent_{challenge_name}")
-        agent_logger.propagate = False
-        agent_logger.handlers = []
-        handler = logging.StreamHandler(agent_log_stream)
-        handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-        agent_logger.addHandler(handler)
-        agent_logger.setLevel(logging.INFO)
-
-        agent = Agent(llm_manager, logger=agent_logger)
-
-        request_ids_before = list(llm_manager.llm_requests)
+        
+        # Setup Docker environment for all challenges
+        docker_manager = DockerManager(logging.getLogger(f"docker_{challenge_name}"))
+        network_name = f"ctf-network-{challenge_name.lower().replace('_', '-')}"
+        network_id = docker_manager.create_network(network_name)
+        
+        # Start any additional services using simplified approach
+        services_deployed = []
+        for service in challenge.services:
+            # Build custom service image if needed
+            image_name = service['image']
+            docker_path = os.path.join(chal_dir, 'docker')
+            if os.path.exists(docker_path) and os.path.exists(os.path.join(docker_path, 'Dockerfile')):
+                logging.info(f"Building custom image: {image_name}")
+                docker_manager.client.images.build(
+                    path=docker_path,
+                    tag=image_name,
+                    rm=True,
+                    forcerm=True
+                )
+                logging.info(f"Successfully built custom image: {image_name}")
+            
+            # Start the service container
+            docker_manager.start_container(
+                image=image_name,
+                name=service['name'],
+                network=network_name,
+                environment=service.get('environment', {}),
+                ports=service.get('ports', {})
+            )
+            services_deployed.append(service['name'])
+            
+            # Simple wait for service to be ready (replace health checks)
+            time.sleep(3)
+            logging.info(f"Service {service['name']} is ready")
+        
+        # Only create network_info if services were deployed
+        network_info = None
+        if services_deployed:
+            network_info = {
+                'network_name': network_name,
+                'network_id': network_id,
+                'services_deployed': services_deployed
+            }
+        
+        # Build and run agent in Docker
+        image_tag = docker_manager.build_agent_image(challenge_name)
+        
+        # Prepare challenge data for Docker
+        challenge_data = {
+            'name': challenge.name,
+            'description': challenge.description,
+            'categories': challenge.categories,
+            'artifacts_folder': challenge.artifacts_folder,
+            'flag': challenge.flag,
+            'flag_regex': challenge.flag_regex,
+            'network_info': network_info
+        }
+        
         start_time = time.time()
-        found_flag = agent.solve_challenge(client)
+        
+        docker_result = docker_manager.run_agent(challenge_data, network_name, challenge_output_dir, image_tag)
+        
         end_time = time.time()
-        request_ids_after = list(llm_manager.llm_requests)
+        
+        # Extract results and LLM usage data from container
+        found_flag = docker_result['result'].get('found_flag')
+        container_request_ids = docker_result['result'].get('llm_request_ids', [])
+        container_cost = docker_result['result'].get('llm_cost', 0.0)
+        
+        # Save Docker logs
+        with open(os.path.join(challenge_output_dir, "agent.log"), "w", encoding="utf-8") as f:
+            f.write(docker_result['logs'])
 
-        challenge_request_ids = [rid for rid in request_ids_after if rid not in request_ids_before]
-        challenge_cost = llm_manager.get_cost_for_requests(challenge_request_ids)
+        # Use container's LLM usage data instead of host-level tracking
+        challenge_request_ids = container_request_ids
+        challenge_cost = container_cost
 
         duration = end_time - start_time
         success = found_flag is not None and found_flag == challenge.flag
@@ -78,13 +128,11 @@ def evaluate_challenge(chal_dir, llm_manager, run_output_dir, run_timestamp):
             "duration": duration,
             "cost": challenge_cost,
             "llm_request_ids": challenge_request_ids,
+            "network_info": network_info,
         }
 
         with open(os.path.join(challenge_output_dir, "result.json"), "w") as f:
             json.dump(result_data, f, indent=4)
-
-        with open(os.path.join(challenge_output_dir, "agent.log"), "w") as f:
-            f.write(agent_log_stream.getvalue())
         
         return result_data
 
@@ -98,9 +146,13 @@ def evaluate_challenge(chal_dir, llm_manager, run_output_dir, run_timestamp):
         with open(os.path.join(challenge_output_dir, "result.json"), "w") as f:
             json.dump(error_data, f, indent=4)
         return error_data
+    finally:
+        # Cleanup Docker resources
+        if docker_manager:
+            docker_manager.cleanup()
 
 def run_evaluation(challenge_dirs, llm_manager):
-    """Runs the evaluation against the specified challenges in parallel."""
+    """Runs the evaluation against the specified challenges."""
     results = []
     
     output_dir_base = "eval_results"
@@ -111,15 +163,13 @@ def run_evaluation(challenge_dirs, llm_manager):
     run_output_dir = os.path.join(output_dir_base, run_timestamp)
     os.makedirs(run_output_dir)
 
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        future_to_chal = {executor.submit(evaluate_challenge, chal_dir, llm_manager, run_output_dir, run_timestamp): chal_dir for chal_dir in challenge_dirs}
-        for future in concurrent.futures.as_completed(future_to_chal):
-            chal_dir = future_to_chal[future]
-            try:
-                result = future.result()
-                results.append(result)
-            except Exception as exc:
-                logging.error(f'{chal_dir} generated an exception: {exc}')
+    # Run Docker evaluations sequentially to avoid resource conflicts
+    for chal_dir in challenge_dirs:
+        try:
+            result = evaluate_challenge(chal_dir, llm_manager, run_output_dir, run_timestamp)
+            results.append(result)
+        except Exception as exc:
+            logging.error(f'{chal_dir} generated an exception: {exc}')
 
     # Sort results alphabetically by challenge name
     results.sort(key=lambda r: r.get('challenge_name', ''))

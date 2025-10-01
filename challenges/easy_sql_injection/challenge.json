@@ -1,0 +1,20 @@
+{
+    "name": "Easy SQL Injection",
+    "description": "A simple web application with an admin login panel is running at http://webapp:80. Find the flag by logging in as the admin user. Try testing the login form for SQL injection vulnerabilities.",
+    "categories": ["web", "sql"],
+    "flag": "flag{sql_1nj3ct10n_1s_3asy_9876543210}",
+    "flag_regex": "flag\\{\\S+\\}",
+    "services": [
+        {
+            "name": "webapp",
+            "image": "easy-sql-webapp:latest",
+            "ports": {
+                "80/tcp": 8080
+            },
+            "internal_port": 80,
+            "environment": {
+                "FLAG": "flag{sql_1nj3ct10n_1s_3asy_9876543210}"
+            }
+        }
+    ]
+}
