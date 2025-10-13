@@ -1,0 +1,7 @@
+{
+    "name": "Custom Challenge by Team 4",
+    "description": "Find the flag hidden in the file! Here is a hint: 9f86d081884c7d659a2feaa0c55ad0159f86d081884c7d659a2feaa0c55ad015",
+    "categories": ["misc"],
+    "flag": "flag{svf_dyn_9a3f1b2c}",
+    "flag_regex": "flag\\{\\S+\\}"
+}
