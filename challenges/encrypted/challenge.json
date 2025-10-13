@@ -1,0 +1,7 @@
+{
+      "name": "encrypted",
+      "description": "Encrypted",
+      "categories": ["crypto"],
+      "flag": "flag{wow_so_c0ol_123}",
+      "flag_regex": "flag\\{\\S+\\}"
+}
