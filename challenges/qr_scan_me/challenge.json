@@ -1,0 +1,10 @@
+{
+    "name": "QR Scan Me",
+    "description": "Scan the QR code and retrieve the flag.",
+    "categories": [
+        "misc",
+        "forensics"
+    ],
+    "flag": "flag{qr_scan_readable_OMcDMGWDaZ}",
+    "flag_regex": "flag\\{\\S+\\}"
+}
