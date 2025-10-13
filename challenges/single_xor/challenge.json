@@ -1,0 +1,8 @@
+{
+  "name": "Single XOR",
+  "description": "A short file contains a flag encrypted with a single-byte XOR key. Brute-force single-byte XOR keys (0-255) to recover the plaintext and the flag.",
+  "categories": ["crypto", "beginner"],
+  "flag": "flag{xor_key_found}",
+  "flag_regex": "flag\\{\\S+\\}",
+  "services": []
+}

@@ -1,0 +1,4 @@
+MAINTAINER SOLUTION (do not ship)
+p = 2168151449
+q = 3746592763
+flag = flag{easy_rsa_283472384}
