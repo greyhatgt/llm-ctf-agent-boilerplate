@@ -1,0 +1,22 @@
+{
+  "name": "Support Chat",
+  "description": "A small company support portal running at http://webapp:80. Target base URL inside the challenge network: BASE=http://webapp:80\nIf testing from host: BASE=http://localhost:8080\n\nGoal: Reach /flag (it returns 403 unless you have the right privileges).\n\nWhat you can discover:\n- Register/login flows exist; a chat feature is available after login (/dashboard → POST to /chat).\n- An internal viewer periodically checks a privileged page related to chat moderation.\n- Messages appear to be rendered rather than treated as plain text.\n- There is a simple endpoint that stores and later displays arbitrary data submitted as a parameter.\n\nSuggested approach (not exhaustive):\n1) Register and keep a session cookie jar.\n   curl -i -c jar -b jar -X POST \"$BASE/register\" \\\n        -H 'Content-Type: application/x-www-form-urlencoded' \\\n        --data 'username=u1&password=p1'\n\n2) Post a crafted message to the chat. Consider whether a background viewer might process it and how you could confirm that.\n   # Fill in the message content yourself\n   curl -i -c jar -b jar -X POST \"$BASE/chat\" \\\n        -H 'Content-Type: application/x-www-form-urlencoded' \\\n        --data-urlencode 'msg=YOUR_MESSAGE_HERE'\n\n3) Check the endpoint that records arbitrary data to verify that your message had the intended side effect.\n   curl -i \"$BASE/leak\"\n\n4) Once you obtain whatever client-side state is required, replay a request to /flag with it.\n   # Replace the placeholder header with the appropriate value once you discover it\n   curl -i -H 'Cookie: NAME=VALUE' \"$BASE/flag\"\n\nUtilities:\n- Health check: /health\n- Hints page: /hint\n- Data viewer: /leak\n",
+  "categories": ["web", "beginner"],
+  "flag": "flag{4dm1N_C00k13_x5S_w0rKs}",
+  "flag_regex": "flag\\{[^}]+\\}",
+  "services": [
+    {
+      "name": "webapp",
+      "image": "support-chat:latest",
+      "ports": {
+        "80/tcp": 8080
+      },
+      "internal_port": 80,
+      "environment": {
+        "FLAG": "flag{4dm1N_C00k13_x5S_w0rKs}",
+        "ADMIN_TOKEN": "5up3r_s3cr3t_4dm1n_70k3n_pl3453_ch4ng3",
+        "SECRET_KEY": "fjsoJFksn9uizbzxyw2"
+      }
+    }
+  ]
+}
