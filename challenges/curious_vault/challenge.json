@@ -1,0 +1,20 @@
+{
+  "name": "Curious Vault",
+  "categories": ["cryptography", "reverse-engineering"],
+  "description": "Analyze a Python program that performs a simple but misleading transformation before verifying a password.",
+  "difficulty": "medium",
+  "flag": "CTF{Curious_encodings_are_fun}",
+  "flag_regex": "CTF\\{[A-Za-z0-9_]+\\}",
+  "artifacts": [
+    {
+      "type": "file",
+      "path": "artifacts/vault_unlocker.py",
+      "description": "Main Python script implementing the vault logic."
+    },
+    {
+      "type": "file",
+      "path": "artifacts/README.txt",
+      "description": "User instructions and hints."
+    }
+  ]
+}
