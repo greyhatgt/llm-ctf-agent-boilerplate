@@ -5,15 +5,20 @@ import logging
 import time
 from datetime import datetime
 
-from helper.ctf_challenge import create_challenge_from_chaldir
+from helper.ctf_challenge import create_challenge_from_chaldir, get_challenges_from_ctfd
 from helper.llm_helper import LiteLLMManager
 from helper.docker_manager import DockerManager
+import dotenv
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def get_challenge_dirs(challenge_target=None):
+def get_challenge_dirs(challenge_target=None, use_ctfd=False, ctfd_url=None, ctfd_token=None):
     """Gets a list of challenge directories."""
+    # If using CTFd, return special marker to fetch from API
+    if use_ctfd:
+        return [{'ctfd': True, 'url': ctfd_url, 'token': ctfd_token, 'name': challenge_target}]
+    
     challenge_base_dir = 'challenges'
     if challenge_target:
         chal_dir = os.path.join(challenge_base_dir, challenge_target)
@@ -26,6 +31,95 @@ def get_challenge_dirs(challenge_target=None):
         return [os.path.join(challenge_base_dir, d) for d in os.listdir(challenge_base_dir) if os.path.isdir(os.path.join(challenge_base_dir, d))]
 
 def evaluate_challenge(chal_dir, llm_manager, run_output_dir, run_timestamp):
+    # Check if this is a CTFd challenge
+    if isinstance(chal_dir, dict) and chal_dir.get('ctfd'):
+        challenge_name = chal_dir.get('name', 'all')
+        ctfd_url = chal_dir.get('url')
+        ctfd_token = chal_dir.get('token')
+        
+        logging.info(f"--- Fetching challenges from CTFd ---")
+        challenges = get_challenges_from_ctfd(ctfd_url, ctfd_token, challenge_name)
+        
+        # Evaluate each challenge
+        results = []
+        temp_artifacts_dirs = []  # Keep track of temp dirs to avoid cleanup
+        
+        for challenge in challenges:
+            challenge_name = challenge.name
+            challenge_output_dir = os.path.join(run_output_dir, challenge_name)
+            os.makedirs(challenge_output_dir, exist_ok=True)
+            
+            # For CTFd challenges, we skip Docker setup
+            # They are solved directly against the CTFd instance
+            try:
+                from agent.agent import Agent
+                from helper.ctf_challenge import CTFChallengeClient
+                
+                agent = Agent(llm_manager)
+                
+                # Create a simple client that submits to CTFd
+                def submit_to_ctfd(flag):
+                    import requests
+                    session = requests.Session()
+                    session.headers.update({
+                        'Authorization': f'Token {ctfd_token}',
+                        'Content-Type': 'application/json'
+                    })
+                    try:
+                        response = session.post(
+                            f"{ctfd_url}/api/v1/challenges/attempt",
+                            json={'challenge_id': challenge.id, 'submission': flag},
+                            timeout=10
+                        )
+                        data = response.json().get('data', {})
+                        return data.get('status') == 'correct'
+                    except:
+                        return False
+                
+                # Store artifacts folder so it doesn't get cleaned up
+                temp_artifacts_dirs.append(challenge.artifacts_folder)
+                
+                # Create CTFd client
+                # Let CTFChallengeClient copy from challenge.artifacts_folder to working_folder
+                working_folder = os.path.join(challenge_output_dir, "workdir")
+                
+                # Check if this is a network-based challenge from CTFd
+                network_info = None
+                if challenge.services:
+                    # Network challenge - extract connection_info
+                    service = challenge.services[0]
+                    connection_info = service.get('connection_info', '')
+                    if connection_info:
+                        network_info = {
+                            'connection_info': connection_info,
+                            'network_name': 'ctfd_network',
+                            'is_ctfd_challenge': True
+                        }
+                
+                client = CTFChallengeClient(challenge, working_folder, submit_to_ctfd, network_info=network_info)
+                
+                start_time = time.time()
+                flag = agent.solve_challenge(client)
+                end_time = time.time()
+                
+                result_data = {
+                    "challenge_name": challenge.name,
+                    "success": flag is not None,
+                    "submitted_flag": flag,
+                    "start_time": datetime.fromtimestamp(start_time).isoformat(),
+                    "end_time": datetime.fromtimestamp(end_time).isoformat(),
+                    "duration": end_time - start_time,
+                }
+                
+                with open(os.path.join(challenge_output_dir, "result.json"), "w") as f:
+                    json.dump(result_data, f, indent=4)
+                
+                results.append(result_data)
+            except Exception as e:
+                logging.error(f"Failed to evaluate {challenge_name}: {e}")
+        
+        return results
+    
     challenge_name = os.path.basename(chal_dir)
     logging.info(f"--- Running evaluation for challenge: {challenge_name} ---")
 
@@ -167,7 +261,11 @@ def run_evaluation(challenge_dirs, llm_manager):
     for chal_dir in challenge_dirs:
         try:
             result = evaluate_challenge(chal_dir, llm_manager, run_output_dir, run_timestamp)
-            results.append(result)
+            # Handle both single result and list of results
+            if isinstance(result, list):
+                results.extend(result)
+            else:
+                results.append(result)
         except Exception as exc:
             logging.error(f'{chal_dir} generated an exception: {exc}')
 
@@ -202,12 +300,23 @@ def run_evaluation(challenge_dirs, llm_manager):
 
 
 def main():
+    # Load environment variables from .env file
+    dotenv.load_dotenv()
+    
     parser = argparse.ArgumentParser(description="Evaluate CTF agent.")
     parser.add_argument("--challenge", help="Specify a single challenge directory name to run.", type=str, default=None)
+    parser.add_argument("--ctfd", help="Use CTFd endpoint instead of local challenges.", action="store_true")
+    parser.add_argument("--ctfd-url", help="CTFd instance URL.", type=str, default=os.getenv("CTFD_URL", "http://129.213.16.86:8000"))
+    parser.add_argument("--ctfd-token", help="CTFd API token.", type=str, default=os.getenv("CTFD_TOKEN"))
     args = parser.parse_args()
 
     llm_manager = LiteLLMManager()
-    challenge_dirs = get_challenge_dirs(args.challenge)
+    challenge_dirs = get_challenge_dirs(
+        args.challenge, 
+        use_ctfd=args.ctfd, 
+        ctfd_url=args.ctfd_url, 
+        ctfd_token=args.ctfd_token
+    )
     if challenge_dirs:
         run_evaluation(challenge_dirs, llm_manager)
     else:

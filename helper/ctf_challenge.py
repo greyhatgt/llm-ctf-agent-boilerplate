@@ -87,6 +87,148 @@ class CTFChallengeGrader:
 # TODO: Integrate with CTFd and similar platforms' APIs
 
 
+def create_challenge_from_ctfd(base_url: str, api_token: str, challenge_data: Dict):
+    """Create a CTFChallenge from CTFd API response"""
+    import tempfile
+    import requests
+    
+    session = requests.Session()
+    session.headers.update({
+        'Authorization': f'Token {api_token}',
+        'Content-Type': 'application/json'
+    })
+    
+    # Create temporary artifacts directory
+    artifacts_folder = tempfile.mkdtemp(prefix='ctfd_challenge_')
+    
+    # Download files if they exist
+    files = challenge_data.get('files', [])
+    if files:
+        print(f"Downloading {len(files)} file(s) for {challenge_data.get('name', 'Unknown')}")
+        for file_path in files:
+            # CTFd file paths are usually relative URLs like "/files/..."
+            file_url = base_url + file_path if not file_path.startswith('http') else file_path
+            try:
+                print(f"Downloading from: {file_url}")
+                # Need to use session to maintain auth
+                response = session.get(file_url, timeout=30)
+                if response.status_code == 200:
+                    filename = os.path.basename(file_path)
+                    # Remove query string from filename
+                    if '?' in filename:
+                        filename = filename.split('?')[0]
+                    # Handle edge cases where filename might be empty
+                    if not filename:
+                        filename = f"file_{len(files)}.dat"
+                    file_path_local = os.path.join(artifacts_folder, filename)
+                    with open(file_path_local, 'wb') as f:
+                        f.write(response.content)
+                    print(f"Downloaded: {filename}")
+                else:
+                    print(f"Failed to download {file_url}: HTTP {response.status_code}")
+            except Exception as e:
+                print(f"Error downloading file {file_path}: {e}")
+    
+    # Extract flag from flags list
+    flags = challenge_data.get('flags', [])
+    flag = flags[0] if flags else ""
+    
+    # Determine categories
+    category = challenge_data.get('category', 'Misc')
+    categories = [category]
+    
+    # Check if this is a network-based challenge
+    connection_info = challenge_data.get('connection_info', '')
+    services = []
+    # If there's connection_info, treat it as a network challenge
+    if connection_info:
+        # Create a fake service entry for network challenges
+        services = [{
+            'name': 'network_challenge',
+            'image': 'network',
+            'connection_info': connection_info
+        }]
+    
+    challenge = CTFChallenge(
+        name=challenge_data.get('name', 'Unknown'),
+        description=challenge_data.get('description', ''),
+        categories=categories,
+        artifacts_folder=artifacts_folder,
+        flag=flag,
+        flag_regex=r'flag\{.*?\}',
+        services=services
+    )
+    
+    return challenge
+
+
+def get_challenges_from_ctfd(base_url: str, api_token: str, challenge_name: Optional[str] = None) -> List[CTFChallenge]:
+    """
+    Get challenges from CTFd API
+    
+    Args:
+        base_url: Base URL of CTFd instance
+        api_token: API token for authentication
+        challenge_name: Optional specific challenge name to fetch
+        
+    Returns:
+        List of CTFChallenge objects
+    """
+    import requests
+    
+    session = requests.Session()
+    session.headers.update({
+        'Authorization': f'Token {api_token}',
+        'Content-Type': 'application/json'
+    })
+    
+    try:
+        response = session.get(f"{base_url}/api/v1/challenges", timeout=10)
+        response.raise_for_status()
+        
+        challenges_data = response.json().get('data', [])
+        challenges = []
+        
+        for ch_data in challenges_data:
+            # If a specific challenge name was provided, allow case-insensitive
+            # and partial substring matching to be more user-friendly.
+            if challenge_name:
+                provided = challenge_name.strip().lower()
+                actual = (ch_data.get('name') or '').strip().lower()
+                if provided not in actual:
+                    continue
+            
+            try:
+                # Get detailed challenge info including files
+                ch_id = ch_data.get('id')
+                detail_response = session.get(f"{base_url}/api/v1/challenges/{ch_id}", timeout=10)
+                if detail_response.status_code == 200:
+                    ch_data = detail_response.json().get('data', ch_data)
+                
+                print(f"Processing challenge: {ch_data.get('name')}, Files: {ch_data.get('files', [])}")
+                
+                challenge = create_challenge_from_ctfd(base_url, api_token, ch_data)
+                # Store CTFd-specific info for later use
+                challenge.id = ch_data.get('id')
+                challenge.solved = ch_data.get('solved', False)
+                challenges.append(challenge)
+            except Exception as e:
+                print(f"Error creating challenge {ch_data.get('name')}: {e}")
+                import traceback
+                traceback.print_exc()
+                continue
+        
+        # If no challenges matched, provide a helpful log message.
+        if challenge_name and not challenges:
+            print(f"No CTFd challenges matched name '{challenge_name}'. Available: {[c.get('name') for c in challenges_data]}")
+        return challenges
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching challenges from CTFd: {e}")
+        import traceback
+        traceback.print_exc()
+        return []
+
+
 def create_challenge_from_chaldir(chaldir: str):
     import json
     challenge_json_path = os.path.join(chaldir, "challenge.json")
