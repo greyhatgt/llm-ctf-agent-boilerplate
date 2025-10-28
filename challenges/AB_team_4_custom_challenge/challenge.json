@@ -1,0 +1,7 @@
+{
+    "name": "AB_team_4_custom_challenge",
+    "description": "Decrypt the message to find the flag, its embedded!",
+    "categories": ["crypto"],
+    "flag": "flag{you_found_me_1295821}",
+    "flag_regex": "flag\\{\\S+\\}"
+}
