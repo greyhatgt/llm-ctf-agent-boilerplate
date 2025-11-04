@@ -35,6 +35,62 @@ finally:
     if _path_to_restore is not None:
         sys.path.insert(0, _path_to_restore)
 
+def ensure_playwright_browsers():
+    """Ensure Playwright browsers are installed. Returns True if successful or already installed."""
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        print("\n⚠ Playwright not installed. Please run: uv sync")
+        return False
+    
+    print(f"  Ensuring Playwright browsers are installed...")
+    try:
+        import subprocess
+        import sys
+        # Install chromium browser (without --quiet flag as it doesn't exist)
+        result = subprocess.run(
+            [sys.executable, "-m", "playwright", "install", "chromium", "--with-deps"],
+            capture_output=True,
+            text=True,
+            timeout=300  # 5 minute timeout for browser download
+        )
+        if result.returncode == 0:
+            print("  ✓ Playwright browsers installed")
+            return True
+        else:
+            # Check if browsers are already installed by trying to launch
+            try:
+                with sync_playwright() as p:
+                    browser = p.chromium.launch(headless=True)
+                    browser.close()
+                print("  ✓ Playwright browsers already installed")
+                return True
+            except:
+                print(f"  ⚠ Playwright browser installation had issues: {result.stderr[:200]}")
+                return False
+    except subprocess.TimeoutExpired:
+        print("  ⚠ Browser installation timed out")
+        # Try to check if browsers are already installed
+        try:
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                browser.close()
+            print("  ✓ Playwright browsers already installed")
+            return True
+        except:
+            return False
+    except Exception as e:
+        # Try to check if browsers are already installed
+        try:
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                browser.close()
+            print("  ✓ Playwright browsers already installed")
+            return True
+        except:
+            print(f"  ⚠ Could not install browsers: {e}")
+            return False
+
 def wait_for_ctfd(container, max_wait=120, check_interval=2):
     """Wait for CTFd to be ready by checking HTTP endpoint"""
     print("Waiting for CTFd to be ready...")
@@ -65,28 +121,14 @@ def wait_for_ctfd(container, max_wait=120, check_interval=2):
 def setup_ctfd_browser(admin_name="admin", admin_email="admin@ctfd.local", admin_password="admin", ctf_name="CTF Platform"):
     """Setup CTFd using browser automation (Playwright). Returns (success, cookies_dict)"""
     try:
-        # Try to import playwright
-        try:
-            from playwright.sync_api import sync_playwright
-        except ImportError:
-            print("\n⚠ Playwright not installed. Installing with uv...")
-            try:
-                import subprocess, sys as _sys
-                # Ensure package is installed via uv if available, else pip
-                subprocess.run([_sys.executable, "-m", "pip", "install", "playwright"], check=False)
-                from playwright.sync_api import sync_playwright  # retry import
-            except Exception as _e:
-                print("  Failed to auto-install Playwright. Please run: uv sync")
-                return False
+        # Ensure Playwright is installed and browsers are available
+        if not ensure_playwright_browsers():
+            print("\n⚠ Could not ensure Playwright browsers are installed")
+            return False, {}, None
+        
+        from playwright.sync_api import sync_playwright
         
         print(f"\nAttempting to setup CTFd via browser automation...")
-        
-        # Ensure browsers are installed (chromium)
-        try:
-            import subprocess, sys as _sys
-            subprocess.run([_sys.executable, "-m", "playwright", "install", "chromium", "--with-deps", "--quiet"], check=False)
-        except Exception:
-            pass
 
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)  # Show browser window to see what's happening
@@ -1399,27 +1441,30 @@ def start_ctfd(admin_name="admin", admin_email="admin@ctfd.local", admin_passwor
         
         # Create team using browser (reopen browser if needed)
         print(f"\n  Creating team...")
-        # We need to reopen browser for team creation
-        from playwright.sync_api import sync_playwright
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(viewport={'width': 1280, 'height': 720})
-            page = context.new_page()
-            
-            # Login first
-            page.goto("http://localhost:8000/login", wait_until="load")
-            time.sleep(0.5)
-            page.locator("input#name").fill(admin_name)
-            page.locator("input#password").fill(admin_password)
-            page.locator("input#_submit").click()
-            time.sleep(2)
-            
-            # Create team
-            create_team_browser(page, team_name=team_name, team_password=team_password)
-            
-            print("\n  Browser window will stay open for 10 seconds...")
-            time.sleep(10)
-            browser.close()
+        # Ensure browsers are installed before creating team
+        if not ensure_playwright_browsers():
+            print("  ⚠ Could not ensure Playwright browsers are installed, skipping team creation")
+        else:
+            from playwright.sync_api import sync_playwright
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                context = browser.new_context(viewport={'width': 1280, 'height': 720})
+                page = context.new_page()
+                
+                # Login first
+                page.goto("http://localhost:8000/login", wait_until="load")
+                time.sleep(0.5)
+                page.locator("input#name").fill(admin_name)
+                page.locator("input#password").fill(admin_password)
+                page.locator("input#_submit").click()
+                time.sleep(2)
+                
+                # Create team
+                create_team_browser(page, team_name=team_name, team_password=team_password)
+                
+                print("\n  Browser window will stay open for 10 seconds...")
+                time.sleep(10)
+                browser.close()
         
         # Sync challenges from challenges/ folder (after team is created)
         sync_challenges(challenges_dir="challenges", api_token=api_token)
