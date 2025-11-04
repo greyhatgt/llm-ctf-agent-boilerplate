@@ -69,12 +69,25 @@ def setup_ctfd_browser(admin_name="admin", admin_email="admin@ctfd.local", admin
         try:
             from playwright.sync_api import sync_playwright
         except ImportError:
-            print("\n⚠ Playwright not installed. Install it with: pip install playwright")
-            print("  Then run: playwright install chromium")
-            return False
+            print("\n⚠ Playwright not installed. Installing with uv...")
+            try:
+                import subprocess, sys as _sys
+                # Ensure package is installed via uv if available, else pip
+                subprocess.run([_sys.executable, "-m", "pip", "install", "playwright"], check=False)
+                from playwright.sync_api import sync_playwright  # retry import
+            except Exception as _e:
+                print("  Failed to auto-install Playwright. Please run: uv sync")
+                return False
         
         print(f"\nAttempting to setup CTFd via browser automation...")
         
+        # Ensure browsers are installed (chromium)
+        try:
+            import subprocess, sys as _sys
+            subprocess.run([_sys.executable, "-m", "playwright", "install", "chromium", "--with-deps", "--quiet"], check=False)
+        except Exception:
+            pass
+
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)  # Show browser window to see what's happening
             context = browser.new_context(viewport={'width': 1280, 'height': 720})
