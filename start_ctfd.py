@@ -43,53 +43,51 @@ def ensure_playwright_browsers():
         print("\n⚠ Playwright not installed. Please run: uv sync")
         return False
     
-    print(f"  Ensuring Playwright browsers are installed...")
+    # First, check if browsers are already installed by trying to launch
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            browser.close()
+        print("  ✓ Playwright browsers already installed")
+        return True
+    except:
+        pass  # Browsers not installed, need to install them
+    
+    print(f"  Installing Playwright browsers (this may take a few minutes)...")
     try:
         import subprocess
         import sys
-        # Install chromium browser (without --quiet flag as it doesn't exist)
+        # Install chromium browser - show output so user knows it's working
+        print("  Running: playwright install chromium --with-deps")
         result = subprocess.run(
             [sys.executable, "-m", "playwright", "install", "chromium", "--with-deps"],
-            capture_output=True,
-            text=True,
-            timeout=300  # 5 minute timeout for browser download
+            stdout=sys.stdout,  # Show output in real-time
+            stderr=subprocess.STDOUT,  # Merge stderr with stdout
+            timeout=600  # 10 minute timeout for browser download
         )
         if result.returncode == 0:
-            print("  ✓ Playwright browsers installed")
-            return True
-        else:
-            # Check if browsers are already installed by trying to launch
+            print("  ✓ Playwright browsers installed successfully")
+            # Verify installation by trying to launch
             try:
                 with sync_playwright() as p:
                     browser = p.chromium.launch(headless=True)
                     browser.close()
-                print("  ✓ Playwright browsers already installed")
                 return True
-            except:
-                print(f"  ⚠ Playwright browser installation had issues: {result.stderr[:200]}")
+            except Exception as e:
+                print(f"  ⚠ Installation completed but browser launch failed: {e}")
                 return False
+        else:
+            print(f"  ⚠ Playwright browser installation failed (exit code: {result.returncode})")
+            print("  Please run manually: uv run playwright install chromium")
+            return False
     except subprocess.TimeoutExpired:
-        print("  ⚠ Browser installation timed out")
-        # Try to check if browsers are already installed
-        try:
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                browser.close()
-            print("  ✓ Playwright browsers already installed")
-            return True
-        except:
-            return False
+        print("  ⚠ Browser installation timed out (took more than 10 minutes)")
+        print("  Please run manually: uv run playwright install chromium")
+        return False
     except Exception as e:
-        # Try to check if browsers are already installed
-        try:
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                browser.close()
-            print("  ✓ Playwright browsers already installed")
-            return True
-        except:
-            print(f"  ⚠ Could not install browsers: {e}")
-            return False
+        print(f"  ⚠ Could not install browsers: {e}")
+        print("  Please run manually: uv run playwright install chromium")
+        return False
 
 def wait_for_ctfd(container, max_wait=120, check_interval=2):
     """Wait for CTFd to be ready by checking HTTP endpoint"""
