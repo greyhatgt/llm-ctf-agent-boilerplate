@@ -62,7 +62,16 @@ class DockerManager:
             if not os.path.exists(dockerfile_path):
                 raise FileNotFoundError(f"Agent Dockerfile not found at {dockerfile_path}")
             
-            image_tag = f"ctf-agent:{challenge_name}"
+            # Sanitize challenge name for Docker tag (remove spaces and invalid characters)
+            # Docker tags can only contain lowercase letters, numbers, underscores, periods, and hyphens
+            sanitized_name = challenge_name.lower().replace(' ', '-')
+            # Remove any other invalid characters
+            import re
+            sanitized_name = re.sub(r'[^a-z0-9._-]', '', sanitized_name)
+            # Ensure it's not empty and doesn't start/end with invalid chars
+            sanitized_name = sanitized_name.strip('._-') or 'challenge'
+            
+            image_tag = f"ctf-agent:{sanitized_name}"
             
             # Build the image using the project root as context
             image, build_logs = self.client.images.build(
@@ -114,7 +123,7 @@ class DockerManager:
             self.logger.error(f"Failed to start container {name}: {e}")
             raise
     
-    def run_agent(self, challenge_data: Dict, network_name: str, output_dir: str, image_tag: str) -> Dict:
+    def run_agent(self, challenge_data: Dict, network_name: str, output_dir: str, image_tag: str, environment: Optional[Dict] = None) -> Dict:
         """Run the agent in a Docker container."""
         container_name = f"agent-{challenge_data['name'].lower().replace(' ', '-')}"
         
@@ -138,20 +147,24 @@ class DockerManager:
                 temp_artifacts: {'bind': '/app/artifacts', 'mode': 'ro'}
             }
             
-            # Prepare environment
-            environment = {
+            # Prepare environment (merge with provided environment if given)
+            base_environment = {
                 'CHALLENGE_DATA': json.dumps(challenge_data),
                 # Copy LiteLLM environment variables for API access
                 'LITELLM_BASE_URL': os.environ.get('LITELLM_BASE_URL', ''),
                 'LITELLM_API_KEY': os.environ.get('LITELLM_API_KEY', ''),
             }
             
+            # Merge with provided environment (for CTFd API tokens, etc.)
+            if environment:
+                base_environment.update(environment)
+            
             # Run the agent container
             container = self.start_container(
                 image=image_tag,
                 name=container_name,
                 network=network_name,
-                environment=environment,
+                environment=base_environment,
                 volumes=volumes
             )
             

@@ -1,0 +1,16 @@
+{
+    "name": "Net Intro",
+    "description": "Connect to the server named 'server' on port 9001 to get your flag! Use: nc server 9001",
+    "categories": [
+        "networking"
+    ],
+    "flag": "flag{n3tw0rk1ng_1s_c00l_right?}",
+    "flag_regex": "flag\\{\\S+\\}",
+    "services": [
+        {
+            "name": "server",
+            "image": "net-intro-server:latest",
+            "internal_port": 9001
+        }
+    ]
+}

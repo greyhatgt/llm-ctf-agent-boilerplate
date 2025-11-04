@@ -3,14 +3,18 @@ FROM python:3.13-slim
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    wget \
-    net-tools \
-    netcat-traditional \
-    nmap \
-    sqlmap \
+RUN apt-get update && \
+    apt-get install -y \
+        curl \
+        wget \
+        net-tools \
+        netcat-traditional \
+        nmap \
     && rm -rf /var/lib/apt/lists/*
+
+# Try to install sqlmap (optional, may not be in repos)
+RUN bash -c "apt-get update && apt-get install -y sqlmap 2>/dev/null || echo 'Warning: sqlmap not available, skipping'" && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install Python dependencies
 COPY pyproject.toml /app/

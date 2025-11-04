@@ -3,11 +3,15 @@ import os
 import json
 import logging
 import time
+import dotenv
 from datetime import datetime
 
-from helper.ctf_challenge import create_challenge_from_chaldir
+from helper.ctf_challenge import create_challenge_from_chaldir, CTFChallenge
 from helper.llm_helper import LiteLLMManager
 from helper.docker_manager import DockerManager
+
+# Load environment variables
+dotenv.load_dotenv()
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -25,8 +29,10 @@ def get_challenge_dirs(challenge_target=None):
     else:
         return [os.path.join(challenge_base_dir, d) for d in os.listdir(challenge_base_dir) if os.path.isdir(os.path.join(challenge_base_dir, d))]
 
-def evaluate_challenge(chal_dir, llm_manager, run_output_dir, run_timestamp):
-    challenge_name = os.path.basename(chal_dir)
+def evaluate_challenge(chal_dir_or_name, llm_manager, run_output_dir, run_timestamp):
+    # Determine challenge name
+    challenge_name = os.path.basename(chal_dir_or_name)
+    
     logging.info(f"--- Running evaluation for challenge: {challenge_name} ---")
 
     challenge_output_dir = os.path.join(run_output_dir, challenge_name)
@@ -34,19 +40,25 @@ def evaluate_challenge(chal_dir, llm_manager, run_output_dir, run_timestamp):
 
     docker_manager = None
     try:
-        challenge = create_challenge_from_chaldir(chal_dir)
+        # Load challenge from local filesystem
+        challenge = create_challenge_from_chaldir(chal_dir_or_name)
         
         # Setup Docker environment for all challenges
         docker_manager = DockerManager(logging.getLogger(f"docker_{challenge_name}"))
-        network_name = f"ctf-network-{challenge_name.lower().replace('_', '-')}"
+        # Sanitize challenge name for network name (replace spaces and underscores with hyphens)
+        sanitized_network_name = challenge_name.lower().replace(' ', '-').replace('_', '-')
+        network_name = f"ctf-network-{sanitized_network_name}"
         network_id = docker_manager.create_network(network_name)
         
         # Start any additional services using simplified approach
         services_deployed = []
+        services_info = []  # Store service details (name, port, etc.)
         for service in challenge.services:
             # Build custom service image if needed
             image_name = service['image']
-            docker_path = os.path.join(chal_dir, 'docker')
+            docker_path = os.path.join(chal_dir_or_name, 'docker')
+            
+            # Build the image if docker directory exists
             if os.path.exists(docker_path) and os.path.exists(os.path.join(docker_path, 'Dockerfile')):
                 logging.info(f"Building custom image: {image_name}")
                 docker_manager.client.images.build(
@@ -67,6 +79,13 @@ def evaluate_challenge(chal_dir, llm_manager, run_output_dir, run_timestamp):
             )
             services_deployed.append(service['name'])
             
+            # Store service info including port
+            service_info = {
+                'name': service['name'],
+                'port': service.get('internal_port', None)
+            }
+            services_info.append(service_info)
+            
             # Simple wait for service to be ready (replace health checks)
             time.sleep(3)
             logging.info(f"Service {service['name']} is ready")
@@ -77,7 +96,8 @@ def evaluate_challenge(chal_dir, llm_manager, run_output_dir, run_timestamp):
             network_info = {
                 'network_name': network_name,
                 'network_id': network_id,
-                'services_deployed': services_deployed
+                'services_deployed': services_deployed,
+                'services': services_info  # Include detailed service information
             }
         
         # Build and run agent in Docker
@@ -102,6 +122,7 @@ def evaluate_challenge(chal_dir, llm_manager, run_output_dir, run_timestamp):
         
         # Extract results and LLM usage data from container
         found_flag = docker_result['result'].get('found_flag')
+        container_success = docker_result['result'].get('success', False)
         container_request_ids = docker_result['result'].get('llm_request_ids', [])
         container_cost = docker_result['result'].get('llm_cost', 0.0)
         
@@ -114,7 +135,9 @@ def evaluate_challenge(chal_dir, llm_manager, run_output_dir, run_timestamp):
         challenge_cost = container_cost
 
         duration = end_time - start_time
-        success = found_flag is not None and found_flag == challenge.flag
+        
+        # Use success from container (which handles CTFd API response vs local comparison)
+        success = container_success
 
         logging.info(f"Challenge: {challenge_name}, Success: {success}, Time: {duration:.2f}s, Cost: ${challenge_cost:.6f}")
 
@@ -207,6 +230,8 @@ def main():
     args = parser.parse_args()
 
     llm_manager = LiteLLMManager()
+    
+    # Local filesystem mode
     challenge_dirs = get_challenge_dirs(args.challenge)
     if challenge_dirs:
         run_evaluation(challenge_dirs, llm_manager)
