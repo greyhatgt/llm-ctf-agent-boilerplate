@@ -10,6 +10,7 @@ from datetime import datetime
 from helper.ctf_challenge import create_challenge_from_chaldir
 from helper.llm_helper import LiteLLMManager
 from helper.docker_manager import DockerManager
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -161,27 +162,31 @@ def evaluate_challenge(chal_dir, llm_manager, run_output_dir, run_timestamp):
         if docker_manager:
             docker_manager.cleanup()
 
-def run_evaluation(challenge_dirs, llm_manager):
-    """Runs the evaluation against the specified challenges."""
+def run_evaluation(challenge_dirs, llm_manager, max_workers=8):
+    """Runs the evaluation against the specified challenges concurrently."""
     results = []
-    
+
     output_dir_base = "eval_results"
-    if not os.path.exists(output_dir_base):
-        os.makedirs(output_dir_base)
+    os.makedirs(output_dir_base, exist_ok=True)
 
     run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     run_output_dir = os.path.join(output_dir_base, run_timestamp)
-    os.makedirs(run_output_dir)
+    os.makedirs(run_output_dir, exist_ok=True)
 
-    # Run Docker evaluations sequentially to avoid resource conflicts
-    for chal_dir in challenge_dirs:
-        try:
-            result = evaluate_challenge(chal_dir, llm_manager, run_output_dir, run_timestamp)
-            results.append(result)
-        except Exception as exc:
-            logging.error(f'{chal_dir} generated an exception: {exc}')
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_chal = {
+            executor.submit(evaluate_challenge, chal_dir, llm_manager, run_output_dir, run_timestamp): chal_dir
+            for chal_dir in challenge_dirs
+        }
 
-    # Sort results alphabetically by challenge name
+        for future in as_completed(future_to_chal):
+            chal_dir = future_to_chal[future]
+            try:
+                result = future.result()
+                results.append(result)
+            except Exception as exc:
+                logging.error(f'{chal_dir} generated an exception: {exc}')
+
     results.sort(key=lambda r: r.get('challenge_name', ''))
 
     logging.info("--- Evaluation Summary ---")
@@ -207,9 +212,8 @@ def run_evaluation(challenge_dirs, llm_manager):
 
     with open(os.path.join(run_output_dir, "summary.json"), "w") as f:
         json.dump(summary_data, f, indent=4)
-    
-    logging.info(f"Summary report saved to {os.path.join(run_output_dir, 'summary.json')}")
 
+    logging.info(f"Summary report saved to {os.path.join(run_output_dir, 'summary.json')}")
 
 def main():
     parser = argparse.ArgumentParser(description="Evaluate CTF agent.")
