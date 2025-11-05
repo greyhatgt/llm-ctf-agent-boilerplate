@@ -3,6 +3,8 @@ import os
 import json
 import logging
 import time
+import uuid
+import subprocess
 from datetime import datetime
 
 from helper.ctf_challenge import create_challenge_from_chaldir
@@ -36,9 +38,17 @@ def evaluate_challenge(chal_dir, llm_manager, run_output_dir, run_timestamp):
     try:
         challenge = create_challenge_from_chaldir(chal_dir)
         
+        url = subprocess.check_output(
+            ["git", "config", "--get", "remote.origin.url"],
+            stderr=subprocess.DEVNULL
+        ).decode().strip()
+
+        # Extract repository name from URL
+        name = url.split("/")[-1].replace(".git", "")
+
         # Setup Docker environment for all challenges
         docker_manager = DockerManager(logging.getLogger(f"docker_{challenge_name}"))
-        network_name = f"ctf-network-{challenge_name.lower().replace('_', '-')}"
+        network_name = f"ctf-network-{challenge_name.lower().replace('_', '-')}-{name}-{uuid.uuid4()}"
         network_id = docker_manager.create_network(network_name)
         
         # Start any additional services using simplified approach
