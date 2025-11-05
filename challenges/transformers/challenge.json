@@ -1,9 +1,0 @@
-{
-    "name": "transformers",
-    "description": "Wait I accidentally dropped the flag into this code and now it's all scrambled up, can you help me out? All I see is `FLTME0IMA1F5Y1T3DZTCOJS5H3UKDNGZQVGCWKF0YZUBO3T2UNU4YJYLHZI4D2U0YJSNS5W0`",
-    "categories": [
-        "rev"
-    ],
-    "flag": "flag{solve_this_manually_i_dare_you}",
-    "flag_regex": "flag\\{\\S+\\}"
-}

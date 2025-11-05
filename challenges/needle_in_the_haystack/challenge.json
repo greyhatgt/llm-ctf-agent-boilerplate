@@ -1,7 +1,0 @@
-{
-    "name": "needle in the haystack",
-    "description": "Help! I've lost my favorite needle and need help finding it! connect using `nc 128.61.57.148 5000`",
-    "categories": ["pwn", "rev"],
-    "flag": "flag{always_take_the_under}",
-    "flag_regex": "flag\\{\\S+\\}"
-}
