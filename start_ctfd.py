@@ -9,6 +9,7 @@ import os
 import time
 import requests
 import json
+import yaml
 import glob
 
 # Fix import issue: the local docker/ directory shadows the docker package
@@ -1018,10 +1019,13 @@ def sync_challenges(challenges_dir="challenges", api_token=None):
     print(f"\n  Syncing challenges from {challenges_dir}...")
     
     # Find all challenge.json files
-    challenge_files = glob.glob(os.path.join(challenges_dir, "**/challenge.json"), recursive=True)
+    # Look for both challenge.json and challenge.yml files
+    challenge_json_files = glob.glob(os.path.join(challenges_dir, "**/challenge.json"), recursive=True)
+    challenge_yml_files = glob.glob(os.path.join(challenges_dir, "**/challenge.yml"), recursive=True)
+    challenge_files = challenge_json_files + challenge_yml_files
     
     if not challenge_files:
-        print(f"  ⚠ No challenge.json files found in {challenges_dir}")
+        print(f"  ⚠ No challenge.json or challenge.yml files found in {challenges_dir}")
         return False
     
     print(f"  Found {len(challenge_files)} challenges")
@@ -1037,12 +1041,48 @@ def sync_challenges(challenges_dir="challenges", api_token=None):
     
     for challenge_file in challenge_files:
         try:
+            # Load challenge data (JSON or YAML)
+            yml_data = None  # Store yml_data for later use
             with open(challenge_file, 'r') as f:
-                challenge_data = json.load(f)
+                if challenge_file.endswith('.yml') or challenge_file.endswith('.yaml'):
+                    yml_data = yaml.safe_load(f)
+                    # Convert YAML format to expected format
+                    challenge_data = {}
+                    challenge_data["name"] = yml_data.get("name", "")
+                    challenge_data["description"] = yml_data.get("description", "")
+                    # Convert category (singular) to categories (list)
+                    category = yml_data.get("category", "Misc")
+                    challenge_data["categories"] = [category] if isinstance(category, str) else category
+                    # Convert flags (list) to flag (string) - take first flag
+                    flags = yml_data.get("flags", [])
+                    if flags:
+                        challenge_data["flag"] = flags[0] if isinstance(flags, list) else flags
+                    else:
+                        challenge_data["flag"] = ""
+                    # Services if present
+                    challenge_data["services"] = yml_data.get("services", [])
+                else:
+                    challenge_data = json.load(f)
             
             challenge_name = challenge_data.get('name', os.path.basename(os.path.dirname(challenge_file)))
             challenge_dir = os.path.dirname(challenge_file)
             artifacts_dir = os.path.join(challenge_dir, "artifacts")
+            
+            # For YAML files, also check the 'files' field
+            files_to_upload = []
+            if yml_data and (challenge_file.endswith('.yml') or challenge_file.endswith('.yaml')):
+                yml_files = yml_data.get("files", [])
+                if yml_files:
+                    for file_path in yml_files:
+                        # File path might be relative to challenge directory
+                        full_path = os.path.join(challenge_dir, file_path)
+                        if os.path.exists(full_path):
+                            files_to_upload.append(full_path)
+                        else:
+                            # Try in artifacts directory
+                            alt_path = os.path.join(artifacts_dir, file_path)
+                            if os.path.exists(alt_path):
+                                files_to_upload.append(alt_path)
             
             print(f"    Syncing challenge: {challenge_name}...")
             
@@ -1152,7 +1192,20 @@ def sync_challenges(challenges_dir="challenges", api_token=None):
                     else:
                         print(f"      ⚠ Failed to add flag: {flags_response.status_code} - {flags_response.text[:200]}")
                 
-                # Upload files from artifacts folder
+                # Upload files - first from YAML files list, then from artifacts folder
+                files_uploaded = False
+                
+                # Upload files specified in YAML files field
+                if files_to_upload:
+                    print(f"      Uploading {len(files_to_upload)} file(s) from YAML files field...")
+                    for file_path in files_to_upload:
+                        if upload_file_to_ctfd(file_path, challenge_id, api_token, base_url):
+                            print(f"        ✓ Uploaded: {os.path.basename(file_path)}")
+                            files_uploaded = True
+                        else:
+                            print(f"        ⚠ Failed: {os.path.basename(file_path)}")
+                
+                # Also check artifacts folder (for JSON challenges or additional files)
                 if os.path.isdir(artifacts_dir):
                     artifact_files = []
                     for root, dirs, files in os.walk(artifacts_dir):
@@ -1160,16 +1213,16 @@ def sync_challenges(challenges_dir="challenges", api_token=None):
                             artifact_files.append(os.path.join(root, file))
                     
                     if artifact_files:
-                        print(f"      Uploading {len(artifact_files)} file(s)...")
+                        print(f"      Uploading {len(artifact_files)} file(s) from artifacts folder...")
                         for artifact_file in artifact_files:
                             if upload_file_to_ctfd(artifact_file, challenge_id, api_token, base_url):
                                 print(f"        ✓ Uploaded: {os.path.basename(artifact_file)}")
+                                files_uploaded = True
                             else:
                                 print(f"        ⚠ Failed: {os.path.basename(artifact_file)}")
-                    else:
-                        print(f"      No files in artifacts folder")
-                else:
-                    print(f"      No artifacts folder found")
+                
+                if not files_uploaded and not files_to_upload and not os.path.isdir(artifacts_dir):
+                    print(f"      No files to upload (no artifacts folder or files field)")
             
         except Exception as e:
             print(f"      ⚠ Error syncing {challenge_file}: {e}")

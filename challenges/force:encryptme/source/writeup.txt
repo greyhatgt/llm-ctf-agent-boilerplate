@@ -1,0 +1,7 @@
+* Bug: a flag is outputted, but is encrypted?
+
+Fortunately we have a key and a cipher. We can easily get the original text by patching the program.
+
+* Exploit
+
+  1) In gdb or by patching the program, run the decrypt command.

@@ -2,6 +2,8 @@
 
 import os
 import shutil
+import json
+import yaml
 from typing import Callable, List, Dict, Optional, Any
 
 
@@ -88,22 +90,68 @@ class CTFChallengeGrader:
 
 
 def create_challenge_from_chaldir(chaldir: str):
-    import json
-    challenge_json_path = os.path.join(chaldir, "challenge.json")
-    if not os.path.exists(challenge_json_path):
-        raise FileNotFoundError(f"challenge.json not found in {chaldir}")
     
-    with open(challenge_json_path, 'r') as f:
-        data = json.load(f)
+    # Try to load challenge.json first, then challenge.yml
+    challenge_json_path = os.path.join(chaldir, "challenge.json")
+    challenge_yml_path = os.path.join(chaldir, "challenge.yml")
+    
+    data = None
+    if os.path.exists(challenge_json_path):
+        with open(challenge_json_path, 'r') as f:
+            data = json.load(f)
+    elif os.path.exists(challenge_yml_path):
+        with open(challenge_yml_path, 'r') as f:
+            yml_data = yaml.safe_load(f)
+            # Convert YAML format to JSON format
+            data = {}
+            data["name"] = yml_data.get("name", "")
+            data["description"] = yml_data.get("description", "")
+            # Convert category (singular) to categories (list)
+            category = yml_data.get("category", "Misc")
+            data["categories"] = [category] if isinstance(category, str) else category
+            # Convert flags (list) to flag (string) - take first flag
+            flags = yml_data.get("flags", [])
+            if flags:
+                data["flag"] = flags[0] if isinstance(flags, list) else flags
+            else:
+                data["flag"] = ""
+            # Generate flag_regex from flag if not provided
+            if data["flag"]:
+                # Extract flag content between {} if present
+                flag_content = data["flag"]
+                if "{" in flag_content and "}" in flag_content:
+                    data["flag_regex"] = "flag\\{\\S+\\}"
+                else:
+                    data["flag_regex"] = "flag\\{\\S+\\}"
+            else:
+                data["flag_regex"] = "flag\\{\\S+\\}"
+            # Load services if present (YAML might have connection_info or services)
+            if "services" in yml_data:
+                data["services"] = yml_data["services"]
+            elif "connection_info" in yml_data:
+                # Convert connection_info to a service if needed
+                conn_info = yml_data["connection_info"]
+                # Parse connection_info like "nc HOST PORT" or just store it
+                data["services"] = []  # Could parse connection_info here if needed
+            else:
+                data["services"] = []
+    else:
+        raise FileNotFoundError(f"Neither challenge.json nor challenge.yml found in {chaldir}")
     
     required_fields = ["name", "description", "categories", "flag", "flag_regex"]
     for field in required_fields:
         if field not in data:
-            raise ValueError(f"Missing required field '{field}' in challenge.json")
+            raise ValueError(f"Missing required field '{field}' in challenge file")
     
+    # Check for artifacts folder, create if it doesn't exist
     artifacts_folder = os.path.join(chaldir, "artifacts")
     if not os.path.isdir(artifacts_folder):
-        raise FileNotFoundError(f"Artifacts folder 'artifacts' not found in {chaldir}")
+        # Try to create it, but don't fail if we can't
+        try:
+            os.makedirs(artifacts_folder, exist_ok=True)
+        except:
+            pass
+        # If still doesn't exist, that's okay - some challenges might not have artifacts
     
     # Load services if present
     services = data.get("services", [])

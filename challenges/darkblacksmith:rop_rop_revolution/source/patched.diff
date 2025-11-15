@@ -1,0 +1,56 @@
+diff --git a/ymca.c b/ymca_patched.c
+index 48f6ead..e36c383 100644
+--- a/ymca.c
++++ b/ymca_patched.c
+@@ -55,6 +55,8 @@ int down_and_up_steps_size = sizeof(down_and_up_steps) / sizeof(down_and_up_step
+ int step = 1;
+ 
+ 
++
++
+ // Function to simulate "pop all" by popping values from the stack into registers
+ void pop_all() {
+     __asm__(
+@@ -85,32 +87,31 @@ bool is_in_array(int step, int arr[], int size) {
+ void vulnerable() {
+     char buffer[64];
+     printf("Enter your Steps of the YMCA Song:\n");
+-    read(STDIN_FILENO, buffer, 1000); 
++    read(STDIN_FILENO, buffer, 64); 
+ }
+ 
+ 
+ 
+ //Help you get the right steps 
+ void direction(int num){
+-	if(num == 0 && is_in_array(step, right_arrow_steps, right_arrow_steps_size)) step++;
+-	if(num == 1 && is_in_array(step, left_arrow_steps, left_arrow_steps_size)) step++;
+-	if(num == 2 && is_in_array(step, up_arrow_steps, up_arrow_steps_size)) step++;
+-	if(num == 3 && is_in_array(step, down_arrow_steps, down_arrow_steps_size)) step++;
+-	if(num == 4 && is_in_array(step, left_and_right_steps, left_and_right_steps_size)) step++;
+-	if(num == 5 && is_in_array(step, down_and_up_steps, down_and_up_steps_size)) step++;
+-	printf("Current step value: %d\n", step);
+-	vulnerable();
++        if(num == 0 && is_in_array(step, right_arrow_steps, right_arrow_steps_size)) step++;
++        if(num == 1 && is_in_array(step, left_arrow_steps, left_arrow_steps_size)) step++;
++        if(num == 2 && is_in_array(step, up_arrow_steps, up_arrow_steps_size)) step++;
++        if(num == 3 && is_in_array(step, down_arrow_steps, down_arrow_steps_size)) step++;
++        if(num == 4 && is_in_array(step, left_and_right_steps, left_and_right_steps_size)) step++;
++        if(num == 5 && is_in_array(step, down_and_up_steps, down_and_up_steps_size)) step++;
++        printf("Current step value: %d\n", step);
+ }
+ 
+ 
+ void win() {
+-	printf("Final step value in win(): %d\n", step);
++        printf("Final step value in win(): %d\n", step);
+     if (step == 148) {
+         printf("Congratulations! You have successfully crafted the ROP chain!\n");
+ 
+         // Open and read the flag file
+         // Use the absolute path in your popen call
+-	FILE *fp = fopen("flag", "r");
++        FILE *fp = fopen("flag", "r");
+         if (fp == NULL) {
+             perror("Failed to open flag file");
+             exit(1);

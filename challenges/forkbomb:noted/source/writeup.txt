@@ -1,0 +1,12 @@
+* Bug: Command injection after base64 decoding
+
+The program base64 encodes the input and uses that to create filename.
+When reading files, it base64 decodes the input and uses that as a filename.
+However, there is vulnerability in using shell metacharacters such as ';' to induce command injection.
+By crafting the filename such that this input is decoded, we can execute an arbitrary command.
+
+
+* Exploit
+
+  1) Create malicious filename which will print flag: "something; cat flag"
+  2) Base64 encode this input and submit as payload

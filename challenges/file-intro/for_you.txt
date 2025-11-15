@@ -1,0 +1,4 @@
+Welcome to your first file challenge!
+Sometimes flags are hidden in plain sight.
+
+Here is your flag: flag{f1l3s_ar3_fun_t0_d0wnl0ad}

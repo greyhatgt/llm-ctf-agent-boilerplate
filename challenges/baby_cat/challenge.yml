@@ -1,0 +1,12 @@
+name: "Baby Cat"
+author: "Admin"
+category: "Miscellaneous"
+description: "Kitten this challenge is easy! Find the flag hidden in the file"
+value: 100
+type: standard
+
+flags:
+  - flag{f0und_th3_f1@g_8295430617}
+
+files:
+  - artifacts/myfile.txt

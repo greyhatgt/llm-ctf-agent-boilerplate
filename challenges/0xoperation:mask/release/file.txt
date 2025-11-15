@@ -1,0 +1,3 @@
+Pay close attention as the script outputs!
+It's only correct if your input gets mapped to the correct output, what simple translation could be going on with your input? And how can you guess the secret key 
+that operates on it? Good luck...

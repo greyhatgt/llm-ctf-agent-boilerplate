@@ -1,0 +1,64 @@
+diff --git a/source/src/challenge.c b/source/src/challenge.c
+index 66e7d24..6dbcb1d 100644
+--- a/source/src/challenge.c
++++ b/source/src/challenge.c
+@@ -78,6 +78,35 @@ void debug_print(const char *format) {
+     printf(format);
+ }
+ 
++// Function to escape shell metacharacters
++char* shell_escape(const char* str) {
++    static char escaped[512];
++    size_t i = 0, j = 0;
++
++    // Add opening quote
++    escaped[j++] = '\'';
++
++    // Copy string, escaping single quotes
++    while (str[i] && j < sizeof(escaped) - 4) {  // Leave room for closing quote
++        if (str[i] == '\'') {
++            // Close quote, insert escaped quote, reopen quote
++            escaped[j++] = '\'';
++            escaped[j++] = '\\';
++            escaped[j++] = '\'';
++            escaped[j++] = '\'';
++        } else {
++            escaped[j++] = str[i];
++        }
++        i++;
++    }
++
++    // Add closing quote
++    escaped[j++] = '\'';
++    escaped[j] = '\0';
++
++    return escaped;
++}
++
+ void view_note() {
+     char filename[64];
+     char command[512];
+@@ -94,7 +123,10 @@ void view_note() {
+     // Base64 decode the filename
+     base64_decode(filename, decoded);
+ 
+-    snprintf(command, sizeof(command), "cat /home/ctf/notes/%s", decoded);
++    // Escape filename
++    char* escaped_filename = shell_escape(decoded);
++
++    snprintf(command, sizeof(command), "cat /home/ctf/notes/%s", escaped_filename);
+     system(command);
+ }
+ 
+@@ -132,7 +164,10 @@ void delete_note() {
+     // Base64 decode the filename
+     base64_decode(filename, decoded);
+ 
+-    snprintf(command, sizeof(command), "rm /home/ctf/notes/%s", decoded);
++    // Escape filename
++    char* escaped_filename = shell_escape(decoded);
++
++    snprintf(command, sizeof(command), "rm /home/ctf/notes/%s", escaped_filename);
+     system(command);
+ 
+     printf("Note deleted!\n");

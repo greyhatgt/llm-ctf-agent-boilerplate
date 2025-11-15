@@ -1,0 +1,4 @@
+* Exploit
+
+  1) Run in Malbolge.
+  2) Caesar Cipher the output with a key of 8.

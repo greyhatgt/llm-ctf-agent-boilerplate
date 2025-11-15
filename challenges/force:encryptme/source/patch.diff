@@ -1,0 +1,13 @@
+diff --git a/source/src/fmtstr.c b/source/src/fmtstr.c
+index cce26f5..458cb18 100644
+--- a/source/src/fmtstr.c
++++ b/source/src/fmtstr.c
+@@ -11,7 +11,7 @@ unsigned int secret = 0xdeadbeef;
+ void handle_failure(char *buf) {
+   char msg[100];
+   snprintf(msg, sizeof(msg), "Invalid Password! %s\n", buf);
+-  printf(msg);
++  printf("%s", msg);
+ }
+ 
+ int main(int argc, char *argv[])

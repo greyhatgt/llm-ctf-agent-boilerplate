@@ -1,0 +1,8 @@
+* Bug: a fmtstr vulnerability
+
+  snprintf(local_74,100,"Wrong! Oops, try again! You put %s\n",param_1);
+  printf(local_74);
+
+* Exploit
+
+  overwrite the GOT of exit() to final_stage()

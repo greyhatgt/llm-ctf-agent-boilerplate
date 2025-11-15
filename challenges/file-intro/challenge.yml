@@ -1,0 +1,12 @@
+name: "File Intro"
+author: "Admin"
+category: "Forensics"
+description: "I've left a file for you. Can you find the flag inside?"
+value: 100
+type: standard
+
+flags:
+  - flag{f1l3s_ar3_fun_t0_d0wnl0ad}
+
+files:
+  - for_you.txt

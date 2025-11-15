@@ -1,0 +1,15 @@
+Writeup:
+
+“ETH wallet” suggests a BIP39 seed phrase. 
+
+Upon using some steganography tools (ex. Aperisolve), you will find that the text is encoded in Sumerian Cuneiform. 
+
+Looking up the Unicode for these symbols indicates that they are part of the U+12000–U+123FF Cuneiform block, all of them being within U+120xx. Therefore, only the last two digits will matter. 
+
+Blue lines indicate where spaces should go. 
+
+Decrypt by identifying the cuneiform symbols, taking the hex values, and converting to text. 
+
+The four symbols at the end, delineated in green, represent a hint as to the encryption method => 00 01 F3 00, or the whirlpool emoji in UTF-32. This implies a rotation method, i.e. ROT13. (In this case, rotated by 17.) 
+
+Plug into CyberChef to brute-force the rotation => “Amount: 9”. 

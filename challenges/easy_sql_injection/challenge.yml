@@ -1,0 +1,12 @@
+name: "Easy SQL Injection"
+author: "Admin"
+category: "Web"
+description: "A simple web application with an admin login panel is running. Find the flag by logging in as the admin user. Try testing the login form for SQL injection vulnerabilities."
+value: 200
+type: standard
+
+flags:
+  - flag{sql_1nj3ct10n_1s_3asy_9876543210}
+
+files:
+  - artifacts/README.md

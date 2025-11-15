@@ -1,0 +1,17 @@
+* Bug: a sidechannelling vulnerability
+
+    if api_key[i] == '0':
+        time.sleep(0.1)
+        print(f"{i + 1} out of 32 of the way done!")
+        temp = int(bit_string[i]) ^ int(api_key[i])
+        final_str += (str(temp))
+    else:
+        time.sleep(.2)
+        temp = int(bit_string[i]) ^ int(api_key[i])
+        final_str += str(temp)
+        print(f"{i + 1} out of 32 of the way done!")
+
+* Exploit
+
+  1) measure the time it takes for the process to calculate each index (longer time = 1 for the api key, shorter time = 0)
+  2) solve a ^ b = c for a, where b is the api key and c is the desired output string given in the initial prompt

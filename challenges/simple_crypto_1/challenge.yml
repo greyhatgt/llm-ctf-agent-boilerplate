@@ -1,0 +1,12 @@
+name: "Simple Crypto 1"
+author: "Admin"
+category: "Cryptography"
+description: "A simple RSA challenge"
+value: 200
+type: standard
+
+flags:
+  - flag{easy_rsa_283472384}
+
+files:
+  - artifacts/challenge.txt

@@ -1,0 +1,12 @@
+name: "Simple Rev 1"
+author: "Admin"
+category: "Reverse Engineering"
+description: "A simple reverse engineering challenge"
+value: 200
+type: standard
+
+flags:
+  - flag{naive_plaintext_14232983}
+
+files:
+  - artifacts/naive_checker_linux_x86_64

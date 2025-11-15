@@ -1,0 +1,13 @@
+diff --git a/source/src/target.c b/source/src/target.c
+index f512754..0022999 100644
+--- a/source/src/target.c
++++ b/source/src/target.c
+@@ -7,7 +7,7 @@
+ 
+ #include "flag.h"
+ 
+-#define MAX_SIZE 0x10000
++#define MAX_SIZE 64
+ 
+ typedef void (*func)(void);
+ 

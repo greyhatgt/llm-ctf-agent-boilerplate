@@ -1,0 +1,11 @@
+* Bug: pointer overwrite
+
+  See the attached source code, the buffer is only 64 bytes but the add and change functions allow you to write past the end of the buffer and overwrite the pointers.
+
+* Exploit
+
+  1) Create a node using the add functionality
+  2) Change the node to overwrite the next pointer for the created node to the run_at_end function pointer
+  3) Move to the "next node" which in this case will be the run_at_end function pointer.
+  4) Change the node to overwrite the run_at_end function pointer with the print_key function.
+  5) Exit the binary so that the run_at_end function pointer is called.

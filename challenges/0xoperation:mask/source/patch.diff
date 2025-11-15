@@ -1,0 +1,20 @@
+diff --git a/source/src/fmtstr.c b/source/src/fmtstr.c
+index cce26f5..458cb18 100644
+--- a/source/src/fmtstr.c
++++ b/source/src/fmtstr.c
+@@ -11,7 +11,7 @@ unsigned int secret = 0xdeadbeef;
+    final_str = ''
+    for i in range(32):
+        if api_key[i] == '0':
+-           time.sleep(0.1)
++           time.sleep(0.2)
+            print(f"{i + 1} out of 32 of the way done!")
+            temp = int(bit_string[i]) ^ int(api_key[i])
+            final_str += (str(temp))
+        else:
+            time.sleep(.2)
+            temp = int(bit_string[i]) ^ int(api_key[i])
+            final_str += str(temp)
+            print(f"{i + 1} out of 32 of the way done!")
+ 
+ int main(int argc, char *argv[])

@@ -1,6 +1,7 @@
 import argparse
 import os
 import json
+import yaml
 import logging
 import time
 import requests
@@ -242,20 +243,63 @@ def evaluate_challenge(challenge_name, llm_manager, run_output_dir, run_timestam
                 break
         
         if local_challenge_dir:
+            # Try challenge.json first, then challenge.yml
             local_challenge_json = os.path.join(local_challenge_dir, "challenge.json")
+            local_challenge_yml = os.path.join(local_challenge_dir, "challenge.yml")
+            local_challenge_file = None
+            if os.path.exists(local_challenge_json):
+                local_challenge_file = local_challenge_json
+            elif os.path.exists(local_challenge_yml):
+                local_challenge_file = local_challenge_yml
         else:
-            local_challenge_json = None
+            local_challenge_file = None
         
-        if local_challenge_json and os.path.exists(local_challenge_json):
+        if local_challenge_file and os.path.exists(local_challenge_file):
             try:
-                with open(local_challenge_json, 'r') as f:
-                    local_data = json.load(f)
+                with open(local_challenge_file, 'r') as f:
+                    if local_challenge_file.endswith('.yml') or local_challenge_file.endswith('.yaml'):
+                        yml_data = yaml.safe_load(f)
+                        # Convert YAML format
+                        local_data = {}
+                        local_data["services"] = yml_data.get("services", [])
+                        
+                        # If no services but connection_info exists, try to create service from it
+                        if not local_data["services"] and yml_data.get("connection_info"):
+                            import re
+                            conn_info = yml_data.get("connection_info")
+                            port_match = None
+                            
+                            # Parse port from connection_info (e.g., "nc HOST PORT" or "nc HOST:PORT")
+                            if isinstance(conn_info, str):
+                                match = re.search(r'nc\s+[\w\.-]+(?::|\s+)(\d+)', conn_info)
+                                if match:
+                                    port_match = int(match.group(1))
+                            
+                            # Check for Dockerfile (in docker/ subdirectory or at root)
+                            docker_dir = os.path.join(local_challenge_dir, 'docker')
+                            dockerfile_at_root = os.path.join(local_challenge_dir, 'Dockerfile')
+                            
+                            has_docker = (os.path.exists(docker_dir) and os.path.exists(os.path.join(docker_dir, 'Dockerfile'))) or os.path.exists(dockerfile_at_root)
+                            
+                            if has_docker and port_match:
+                                # Create service definition
+                                challenge_name_sanitized = challenge.name.lower().replace(' ', '-').replace('_', '-')
+                                service = {
+                                    "name": "server",
+                                    "image": f"{challenge_name_sanitized}:latest",
+                                    "internal_port": port_match,
+                                    "ports": {}
+                                }
+                                local_data["services"] = [service]
+                                logging.info(f"Created service from connection_info: server on port {port_match}")
+                    else:
+                        local_data = json.load(f)
                 local_services = local_data.get("services", [])
                 if local_services:
-                    logging.info(f"Found local challenge.json with {len(local_services)} service(s), merging service definitions")
+                    logging.info(f"Found local challenge file with {len(local_services)} service(s), merging service definitions")
                     challenge.services = local_services
             except Exception as e:
-                logging.warning(f"Could not load local challenge.json: {e}")
+                logging.warning(f"Could not load local challenge file: {e}")
         
         # Store local_challenge_dir for later use in building service images
         challenge._local_challenge_dir = local_challenge_dir
@@ -278,19 +322,30 @@ def evaluate_challenge(challenge_name, llm_manager, run_output_dir, run_timestam
             # In CTFd mode, try to find local docker directory for building
             # We stored it earlier when merging service definitions
             local_challenge_dir = getattr(challenge, '_local_challenge_dir', None)
+            docker_path = None
             if local_challenge_dir:
-                docker_path = os.path.join(local_challenge_dir, 'docker')
+                # Check for docker/ subdirectory first
+                docker_subdir = os.path.join(local_challenge_dir, 'docker')
+                if os.path.exists(docker_subdir) and os.path.exists(os.path.join(docker_subdir, 'Dockerfile')):
+                    docker_path = docker_subdir
+                # Otherwise check for Dockerfile at root
+                elif os.path.exists(os.path.join(local_challenge_dir, 'Dockerfile')):
+                    docker_path = local_challenge_dir
             
             # Build the image if docker directory exists
-            if docker_path and os.path.exists(docker_path) and os.path.exists(os.path.join(docker_path, 'Dockerfile')):
-                logging.info(f"Building custom image: {image_name} from {docker_path}")
-                docker_manager.client.images.build(
-                    path=docker_path,
-                    tag=image_name,
-                    rm=True,
-                    forcerm=True
-                )
-                logging.info(f"Successfully built custom image: {image_name}")
+            if docker_path and os.path.exists(docker_path):
+                dockerfile_path = os.path.join(docker_path, 'Dockerfile')
+                if os.path.exists(dockerfile_path):
+                    logging.info(f"Building custom image: {image_name} from {docker_path}")
+                    docker_manager.client.images.build(
+                        path=docker_path,
+                        tag=image_name,
+                        rm=True,
+                        forcerm=True
+                    )
+                    logging.info(f"Successfully built custom image: {image_name}")
+                else:
+                    logging.warning(f"Dockerfile not found in {docker_path}, trying to use existing image")
             else:
                 # In CTFd mode, if we can't build locally, try to use existing image or fail
                 logging.warning(f"Could not find local docker directory for {image_name}, trying to use existing image")

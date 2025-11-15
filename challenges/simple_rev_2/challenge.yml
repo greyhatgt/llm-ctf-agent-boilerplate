@@ -1,0 +1,12 @@
+name: "Simple Rev 2"
+author: "Admin"
+category: "Reverse Engineering"
+description: "A simple reverse engineering challenge but with a twist"
+value: 250
+type: standard
+
+flags:
+  - flag{xored_plaintext_585849239}
+
+files:
+  - artifacts/xor_obf_checker_linux_x86_64

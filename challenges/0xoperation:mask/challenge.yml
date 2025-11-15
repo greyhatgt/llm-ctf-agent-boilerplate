@@ -1,0 +1,15 @@
+name: "0xoperation:mask"
+author: "Admin"
+category: "Miscellaneous"
+description: "Pay close attention as the script outputs! It's only correct if your input gets mapped to the correct output, what simple translation could be going on with your input? And how can you guess the secret key that operates on it? Good luck..."
+value: 150
+type: standard
+
+connection_info: nc server 9217
+
+flags:
+  - tkctf{y0u_h4ck3d_th3_g4m3}
+
+files:
+  - release/file.txt
+

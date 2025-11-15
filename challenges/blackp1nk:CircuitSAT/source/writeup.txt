@@ -1,0 +1,10 @@
+* Bug: a fmtstr vulnerability
+
+  char msg[100];
+  snprintf(msg, sizeof(msg), "Invalid Password! %s\n", buf);
+  printf(msg);
+
+* Exploit
+
+  1) overwrite 'secret' with any value
+  2) overwrite the GOT of puts() to print_key()

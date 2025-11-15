@@ -1,0 +1,12 @@
+name: "Rotatouille"
+author: "Admin"
+category: "Cryptography"
+description: "Remmy, but he likes toy ciphers"
+value: 150
+type: standard
+
+flags:
+  - flag{r0und_rat_13}
+
+files:
+  - artifacts/flag.txt

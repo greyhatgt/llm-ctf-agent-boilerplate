@@ -1,0 +1,8 @@
+* Bug: a random password is generated with the possibility of a null character as the first byte
+
+  The password logic will modify the random byte to make it a printable ASCII character, unless the character is null.
+
+* Exploit
+
+  1) review code to find logic error in creating password
+  2) brute force password by sending null byte

@@ -1,0 +1,11 @@
+name: "Net Intro"
+author: "Admin"
+category: "Networking"
+description: "Connect to the server to get your flag! `nc HOST PORT`"
+value: 100
+type: standard
+
+connection_info: nc server 9001
+
+flags:
+  - flag{n3tw0rk1ng_1s_c00l_right?}

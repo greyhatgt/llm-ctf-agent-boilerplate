@@ -1,0 +1,12 @@
+name: "Baby Web"
+author: "Admin"
+category: "Web"
+description: "A simple web application is running. Find the admin page to get the flag. Start by exploring the website and look for hidden pages or directories. Check for common files like robots.txt that might give you hints."
+value: 150
+type: standard
+
+flags:
+  - flag{admin_page_found_12345}
+
+files:
+  - artifacts/README.txt

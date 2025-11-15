@@ -1,3 +1,7 @@
+uv run start_ctfd.py
+uv run eval_agent_local.py OR include --challenge flag with the specific challenge
+
+
 # CTF LLM Agent Boilerplate
 
 This project provides a Docker-based framework for developing and evaluating Large Language Model (LLM) agents for Capture The Flag (CTF) competitions. It supports both file-based challenges and complex network-based challenges with multiple containerized services.
@@ -25,6 +29,7 @@ Install dependencies:
 
 ```bash
 uv sync
+uv run playwright install chromium --with-deps
 ```
 
 ### 3. Configuration

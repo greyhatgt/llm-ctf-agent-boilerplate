@@ -1,0 +1,42 @@
+CC ?= gcc
+CFLAGS ?= -std=gnu99 -O0 -g
+LDFLAGS ?=
+LIBS ?=
+
+SRC = target.c
+
+# 32b or 64b
+#CFLAGS += -m32
+CFLAGS += -m64
+
+# supress warning
+CFLAGS += -Wno-format-security
+
+# enable executable stack
+# CFLAGS += -z execstack
+
+# enable SSP
+CFLAGS += -fstack-protector
+
+# disable SSP
+# CFLAGS += -fno-stack-protector
+
+# enable ASLR
+# CFLAGS += -pie -fPIE
+
+# disable ASLR
+CFLAGS += -no-pie
+
+ALL := target
+
+.PHONY: all
+all: $(ALL)
+
+target: $(SRC) flag.h
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS) $(LIBS)
+
+.PHONY: clean
+clean:
+	$(RM) -f $(ALL)
+
+

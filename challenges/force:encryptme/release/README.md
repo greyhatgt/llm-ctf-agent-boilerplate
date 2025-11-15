@@ -1,0 +1,1 @@
+The flag should have be easy to get, but the developer committed an oopsie-poopsie. Help developer fix his mistake and get the flag.

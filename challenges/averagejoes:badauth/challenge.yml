@@ -1,0 +1,16 @@
+name: "averagejoes:badauth"
+author: "Admin"
+category: "Pwn"
+description: "The Purple Cobra Training site has a secure password that is changed very frequently. The password is made up of random ASCII characters and can be a random length of up to 15 characters long."
+value: 200
+type: standard
+
+connection_info: nc server 9214
+
+flags:
+  - tkctf{starting_from_nothing}
+
+files:
+  - release/file.txt
+  - release/target
+

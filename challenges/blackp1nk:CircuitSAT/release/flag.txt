@@ -1,0 +1,9 @@
+Brought to you by CS2110 and CS2200 PTSD.
+
+
+Refs
+ - https://ra4king.github.io/CircuitSim/
+ - https://en.wikipedia.org/wiki/Boolean_satisfiability_problem
+ - https://en.wikipedia.org/wiki/Conjunctive_normal_form
+ - https://en.wikipedia.org/wiki/Z3_Theorem_Prover
+ - http://www.cs.toronto.edu/~victorn/tutorials/z3_SAT_2019/index.html

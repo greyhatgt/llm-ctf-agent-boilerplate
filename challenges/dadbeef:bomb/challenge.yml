@@ -1,0 +1,16 @@
+name: "dadbeef:bomb"
+author: "Admin"
+category: "Pwn"
+description: "4 staged challenge! Answer the questions and move on! But wait, where's the final stage? Does moving on with stages yield you the flag?"
+value: 300
+type: standard
+
+connection_info: nc server 9225
+
+flags:
+  - tkctf{submit_this_and_win!}
+
+files:
+  - release/file.txt
+  - artifacts/target
+
