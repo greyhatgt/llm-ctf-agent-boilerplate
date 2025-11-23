@@ -1,0 +1,7 @@
+{
+    "name": "obfuscation",
+    "description": "Characters swapped with numbers",
+    "categories": ["rev"],
+    "flag": "flag{swaPd_w1f_s1mb0lZ}",
+    "flag_regex": "flag\\{\\S+\\}"
+}

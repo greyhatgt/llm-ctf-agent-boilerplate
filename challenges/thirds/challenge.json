@@ -1,0 +1,7 @@
+{
+    "name": "thirds",
+    "description": "Grab third characters",
+    "categories": ["rev"],
+    "flag": "flag{Xtr@ct1ng_3rdz}",
+    "flag_regex": "flag\\{\\S+\\}"
+}
