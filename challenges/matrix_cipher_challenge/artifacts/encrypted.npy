@@ -1,0 +1,25 @@
+# encrypt_matrix.py
+import numpy as np
+
+# Define the flag
+flag = b"flag{matrix_cipher}"
+
+# Pad to multiple of 4 bytes
+pad_len = (4 - len(flag) % 4) % 4
+flag += b" " * pad_len
+
+# Convert to matrix
+P = np.frombuffer(flag, dtype=np.uint8).reshape(-1, 4).T  # shape: (4, n)
+
+# Key matrix (invertible mod 256)
+K = np.array([[3, 5, 2, 7],
+              [1, 1, 4, 2],
+              [6, 3, 5, 1],
+              [2, 7, 1, 3]], dtype=np.uint8)
+
+# Encrypt
+C = (K @ P) % 256
+
+# Save encrypted flag
+np.save("encrypted.npy", C)
+

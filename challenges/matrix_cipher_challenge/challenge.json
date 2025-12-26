@@ -1,0 +1,8 @@
+{
+  "name": "Matrix Cipher",
+  "description": "A flag has been encrypted using a matrix transformation modulo 256. Recover the key or invert the transformation to decrypt the flag.",
+  "categories": ["crypto", "intermediate"],
+  "flag": "flag{matrix_cipher}",
+  "flag_regex": "flag\\{\\S+\\}",
+  "services": []
+}

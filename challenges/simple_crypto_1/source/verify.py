@@ -3,7 +3,7 @@
 verify_easy.py
 
 Usage:
-  python3 verify_easy.py path/to/challenge.txt "flag{...}"
+  python3 verify_easy.py path/to/challenge.txt "CTF{...}"
 
 Reads N,e,c from challenge.txt and checks whether the provided flag
 encrypts to c under the given N and e.
