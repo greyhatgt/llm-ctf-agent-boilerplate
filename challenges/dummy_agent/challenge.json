@@ -1,0 +1,7 @@
+{
+  "name": "Dummy Agent",
+  "description": "Dummy Agent is a state-of-the-art AI designed to perform tasks with minimal input! However, one of our engineers may have accidentally included their api key in the code in the agent demo somehow. Could you access their account? Hint: There may be hidden commands within the agent's code that could help you retrieve the api-key.",
+  "categories": ["rev"],
+  "flag": "flag{w3lc0me_t0_th3_dummy_4g3nt}",
+  "flag_regex": "flag\\{\\S+\\}"
+}

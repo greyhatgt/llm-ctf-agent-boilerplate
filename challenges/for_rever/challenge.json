@@ -1,0 +1,8 @@
+{
+    "name": "for_rever",
+    "description": "whenever, wherever, we are meant to be together",
+    "categories": ["rev"],
+    "flag": "flag{l3sten_t3_th5s_s0ng_r1ght_n0w}",
+    "flag_regex": "flag\\{\\S+\\}"
+
+}
