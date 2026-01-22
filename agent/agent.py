@@ -46,8 +46,11 @@ class SimpleAgent(AgentInterface):
         self.log(f"Challenge categories: {challenge.challenge.categories}")
         
         # Check if this is a network-based challenge (has network_info)
-        if (challenge.network_info and 
-            challenge.network_info.get('network_name')):
+        # For CTFd challenges, check for connection_info
+        is_ctfd_network = challenge.network_info and challenge.network_info.get('is_ctfd_challenge')
+        has_network_info = challenge.network_info and challenge.network_info.get('network_name')
+        
+        if has_network_info or is_ctfd_network:
             self.log("Detected network-based challenge")
             return self._solve_network_challenge(challenge)
         else:
@@ -58,6 +61,51 @@ class SimpleAgent(AgentInterface):
         """Handle network-based challenges with service discovery."""
         
         network_name = challenge.network_info.get('network_name', 'unknown')
+        connection_info = challenge.network_info.get('connection_info', '')
+        is_ctfd = challenge.network_info.get('is_ctfd_challenge', False)
+        
+        if is_ctfd and connection_info:
+            # For CTFd network challenges, use the connection_info directly
+            self.log(f"CTFd Network Challenge: {connection_info}")
+            # Extract host and port from connection_info (format: "nc HOST PORT")
+            parts = connection_info.split()
+            self.log(f"Parsed connection_info parts: {parts}")
+            if len(parts) >= 3 and parts[0] == 'nc':
+                host = parts[1]
+                port = parts[2]
+                self.log(f"Connecting to {host}:{port}")
+                
+                # Try to connect with netcat and get flag
+                import subprocess
+                try:
+                    cmd = f"nc {host} {port}"
+                    self.log(f"Running command: {cmd}")
+                    result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=10)
+                    output = result.stdout
+                    self.log(f"Netcat output: {output}")
+                    
+                    # Extract flag from output
+                    import re
+                    match = re.search(challenge.challenge.flag_regex, output)
+                    if match:
+                        flag = match.group(0)
+                        self.log(f"Found flag: {flag}")
+                        if challenge.submit_flag(flag):
+                            self.log("CORRECT FLAG SUBMITTED!")
+                            return flag
+                        else:
+                            self.log("Flag submitted but marked as incorrect")
+                    else:
+                        self.log(f"No flag found in output matching pattern: {challenge.challenge.flag_regex}")
+                except Exception as e:
+                    self.log(f"Error connecting to {host}:{port}: {e}")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                self.log(f"connection_info format not recognized: {connection_info}")
+            
+            return None
+        
         self.log(f"Operating in Docker network: {network_name}")
         
         llm_client = self.lite_llm_manager.create_client()
