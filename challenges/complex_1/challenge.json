@@ -1,0 +1,7 @@
+{
+    "name": "The Cryptographic Vault",
+    "description": "A multi-layered challenge involving encrypted communications, hidden web services, and cryptographic puzzles. The flag is hidden behind multiple layers of security that must be systematically bypassed.",
+    "categories": ["cryptography", "web", "forensics", "reverse-engineering"],
+    "flag": "CTF{m4st3r_0f_crypt0_4nd_w3b_3xpl0it4t10n}",
+    "flag_regex": "CTF\\{[a-zA-Z0-9_!@#$%^&*()\\-+=]{20,40}\\}"
+}
