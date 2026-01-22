@@ -1,0 +1,11 @@
+{
+  "name": "Hidden Snapshot",
+  "description": "A cheerful fox waves hello, but that greeting might mean more than it seems. Look closely; maybe the pixels are trying to tell you 'hell0' in their own way.",
+  "categories": [
+    "forensics",
+    "steganography"
+  ],
+  "flag": "flag{hell0_l00Ks_l1k3_y0u_f0uNd_1t}",
+  "flag_regex": "flag\\{\\S+\\}"
+}
+

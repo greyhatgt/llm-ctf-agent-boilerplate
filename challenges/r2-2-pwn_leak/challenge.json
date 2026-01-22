@@ -1,0 +1,11 @@
+{
+  "name": "r2-2-pwn_leak",
+  "description": "pwn challenge: the binary leaks win()'s address at startup — overwrite the return address to call win() and retrieve the flag.",
+  "categories": [
+    "pwn",
+    "binary"
+  ],
+  "flag": "flag{w3lcome_back_t0_win}",
+  "flag_regex": "flag\\{\\S+\\}"
+}
+

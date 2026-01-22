@@ -1,0 +1,7 @@
+{
+"name": "r3-2-chronovault",
+"categories": ["rev"],
+"description": "A small custom VM drives a clock state. Provide four small integers that steer the VM's clock to the secret unlock value. Reverse the bytecode or brute-force the small input space.",
+"flag": "flag{chr0n0v4u1t_d34DB3eF}",
+"flag_regex": "flag\\{\\S+\\}"
+}
