@@ -1,0 +1,10 @@
+{
+	"name": "Image Location",
+	"description": "The president of the Greyhat at GT Cyber Security Club has been kidnapped. Find his location and save him. Submit the flag in the format flag{longitudeCoordinate_latitudeCoordinate} with 6 decimal places. For example, if the location is 37.774929, -122.419418, the flag should be flag{37.774929_-122.419418}.",
+	"categories": [
+		"misc",
+		"forensics"
+	],
+	"flag": "flag{67.676767_67.676767}",
+	"flag_regex": "flag\\{\\d+\\.\\d+_\\d+\\.\\d+\\}"
+}
